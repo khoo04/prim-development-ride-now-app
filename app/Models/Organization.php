@@ -113,4 +113,11 @@ class Organization extends Model
     public function charges(){
         return $this->hasMany(OrganizationCharge::class);
     }
+
+    /**
+     * OrderS ORM
+     */
+    public function dishes(){
+        return $this->hasMany(Dish::class,'organ_id');
+    }
 }

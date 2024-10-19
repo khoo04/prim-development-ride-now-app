@@ -136,3 +136,32 @@ Route::group(['prefix' => 'derma', 'namespace' => 'MobileAPI'], function (){
 
 
 });
+
+/**
+ * OrderS Mobile API V2
+ */
+Route::group(['prefix' => 'OrderS_V2'], function(){
+    Route::group(['prefix' => 'auth'], function() {
+        Route::post('login', 'OrderSAPI\AuthController@login');
+        Route::post('register', 'OrderSAPI\RegisterController@registerViaApi');
+    });
+    Route::group(['prefix' => 'public'], function(){
+        Route::get('index','OrderSAPI\PublicController@index');
+        Route::get('menu','OrderSAPI\PublicController@getMenu');
+    });
+    Route::group(['prefix' => 'test', 'middleware' => 'auth:sanctum'], function(){
+       Route::get('getRoles','OrderSAPI\TestController@getRoles');
+    });
+
+    //Authenticated Route
+    Route::group(['middleware' => 'auth:sanctum'], function(){
+        //Admin Route
+        Route::group(['prefix'=>'admin'],function(){
+            Route::get('shops','OrderSAPI\AdminController@getShop');
+            Route::get('dish_types','OrderSAPI\AdminController@getDishTypeList');
+            Route::post('dishes','OrderSAPI\AdminController@addDishes');
+            Route::put('dishes','OrderSAPI\AdminController@updateDishes');
+            Route::delete('dishes','OrderSAPI\AdminController@deleteDishes');
+        });  
+    });
+});
