@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\OrderSAPI;
+namespace App\Http\Controllers\RideNowAPI;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;

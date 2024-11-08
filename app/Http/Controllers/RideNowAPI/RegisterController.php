@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\OrderSAPI;
+namespace App\Http\Controllers\RideNowAPI;
 
 use App\Http\Controllers\Controller;
 use App\User;
@@ -34,6 +34,8 @@ class RegisterController extends Controller
         if ($validator->fails()) {
 
             return response()->json([
+                'success' => false,
+                'message' => "Validation failed",
                 'errors' => $validator->errors()
             ], 422);
         }
@@ -52,15 +54,15 @@ class RegisterController extends Controller
 
             // Return the newly registered user along with the auth token
             return response()->json([
+                "success" => true,
                 'data' => $user,
                 'message' => 'User registered successfully',
                 'access_token' => $token,
-                'token_type' => 'Bearer'
             ], 201);
         } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Registration failed',
-                'message' => $e->getMessage()
+                "success" => false,
+                'message' => 'Registration failed', 
             ], 500);
         }
     }
@@ -77,7 +79,7 @@ class RegisterController extends Controller
             'name'              => ['required', 'string', 'max:255'],
             'email'             => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password'          => ['required', 'min:8', 'confirmed', 'regex:/^.*(?=.{3,})(?=.*[a-zA-Z])(?=.*[0-9])(?=.*[\d\x])(?=.*[@!$#%^&*()]).*$/'],
-            'telno'             => ['required', 'numeric', 'regex:/^\+60\d{9,10}$/','unique:users'], // Validate phone number length
+            'phone_number'      => ['required', 'numeric', 'regex:/^\+60\d{9,10}$/','unique:users,telno'], // Validate phone number length
         ], [
             'password.regex' => 'Password must contain at least 1 number, 1 uppercase letter, and 1 special character (@!$#%^&*()).'
         ]);
@@ -111,7 +113,7 @@ class RegisterController extends Controller
             'name'              => $data['name'],
             'email'             => $data['email'],
             'password'          => Hash::make($data['password']),
-            'telno'             => $data['telno'],
+            'telno'             => $data['phone_number'],
         ]);
 
         // Assign a role to the user, default to role_id 15 (non-admin)

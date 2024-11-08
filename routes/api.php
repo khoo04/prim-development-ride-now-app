@@ -138,30 +138,38 @@ Route::group(['prefix' => 'derma', 'namespace' => 'MobileAPI'], function (){
 });
 
 /**
- * OrderS Mobile API V2
+ * Ride Now API
  */
-Route::group(['prefix' => 'OrderS_V2'], function(){
+Route::group(['prefix' => 'RideNowV1'], function(){
     Route::group(['prefix' => 'auth'], function() {
-        Route::post('login', 'OrderSAPI\AuthController@login');
-        Route::post('register', 'OrderSAPI\RegisterController@registerViaApi');
+        Route::post('login', 'RideNowAPI\AuthController@login');
+        Route::post('register', 'RideNowAPI\RegisterController@registerViaApi');
     });
     Route::group(['prefix' => 'public'], function(){
-        Route::get('index','OrderSAPI\PublicController@index');
-        Route::get('menu','OrderSAPI\PublicController@getMenu');
+        Route::get('index','RideNowAPI\PublicController@index');
+        Route::get('menu','RideNowAPI\PublicController@getMenu');
     });
     Route::group(['prefix' => 'test', 'middleware' => 'auth:sanctum'], function(){
-       Route::get('getRoles','OrderSAPI\TestController@getRoles');
+       Route::get('getRoles','RideNowAPI\TestController@getRoles');
     });
 
     //Authenticated Route
     Route::group(['middleware' => 'auth:sanctum'], function(){
+        //Auth
+        Route::group(['prefix' => 'auth'], function() {
+            Route::post('user', 'RideNowAPI\AuthController@getUserData');
+            Route::post('logout','RideNowAPI\AuthController@logout');
+        });
         //Admin Route
         Route::group(['prefix'=>'admin'],function(){
-            Route::get('shops','OrderSAPI\AdminController@getShop');
-            Route::get('dish_types','OrderSAPI\AdminController@getDishTypeList');
-            Route::post('dishes','OrderSAPI\AdminController@addDishes');
-            Route::put('dishes','OrderSAPI\AdminController@updateDishes');
-            Route::delete('dishes','OrderSAPI\AdminController@deleteDishes');
+            Route::get('shops','RideNowAPI\AdminController@getShop');
+            Route::get('dish_types','RideNowAPI\AdminController@getDishTypeList');
+            Route::post('dishes','RideNowAPI\AdminController@addDishes');
+            Route::put('dishes','RideNowAPI\AdminController@updateDishes');
+            Route::delete('dishes','RideNowAPI\AdminController@deleteDishes');
         });  
+        Route::group(['prefix' => 'users'], function(){
+            
+        });
     });
 });

@@ -7,9 +7,6 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Dish extends Model
 {
-    use SoftDeletes;
-
-    protected $dates = ['deleted_at']; // Specify the field to use for soft deletes
       /**
      * The attributes that are mass assignable.
      *
