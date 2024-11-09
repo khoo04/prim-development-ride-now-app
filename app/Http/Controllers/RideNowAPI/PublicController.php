@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
 use App\Models\Organization;
+use Illuminate\Http\Request;
+use App\RideNow_Vehicle_Types;
+use App\Http\Controllers\Controller;
 
 class PublicController extends Controller
 {
@@ -58,5 +59,7 @@ class PublicController extends Controller
 
         return response()->json($menu);
     }
+
+  
 
 }

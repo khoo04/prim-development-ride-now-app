@@ -84,4 +84,34 @@ class User extends Authenticatable
         return $this->hasMany(Booking::class, 'id' ,'customerid');
     }
 
+    //RideNow Relationship
+
+    // Vouchers that user obtain
+    public function vouchers()
+    {
+        return $this->hasMany(RideNow_Vouchers::class, 'user_id');
+    }
+
+    // Rides the user has joined as a passenger
+    public function joinedRides(){
+        return $this
+        ->belongsToMany(RideNow_Rides::class,'ride_now__rides_users','user_id','ride_id')
+        ->withPivot('joined')
+        ->withTimestamps();
+    }
+
+    // Rides the user has created as a driver or organizer
+    public function createdRides(){
+        return $this->hasMany(RideNow_Rides::class,'ride_id');
+    }
+
+    // Payments that belongs to users
+    public function payments(){
+        return $this->hasMany(RideNow_Payments::class,'user_id');
+    }
+
+    //Vehicles that belongs to uesrs
+    public function vehicles(){
+        return $this->hasMany(RideNow_Vehicles::class,'user_id');
+    }
 }

@@ -149,6 +149,10 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         Route::get('index','RideNowAPI\PublicController@index');
         Route::get('menu','RideNowAPI\PublicController@getMenu');
     });
+
+    Route::group(['prefix' => 'vehicle'], function(){
+        Route::get('types','RideNowAPI\VehicleController@listVehicleType');
+    });
     Route::group(['prefix' => 'test', 'middleware' => 'auth:sanctum'], function(){
        Route::get('getRoles','RideNowAPI\TestController@getRoles');
     });
@@ -159,6 +163,17 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         Route::group(['prefix' => 'auth'], function() {
             Route::post('user', 'RideNowAPI\AuthController@getUserData');
             Route::post('logout','RideNowAPI\AuthController@logout');
+        });
+        //Ride Route
+        Route::group(['prefix' => 'ride'], function(){
+            Route::post('create','RideNowAPI\RideController@createRide');
+        });
+        //Vehicle Route
+        Route::group(['prefix' => 'vehicle'], function(){ 
+            Route::get('','RideNowAPI\VehicleController@listVehicle');
+            Route::post('','RideNowAPI\VehicleController@createVehicle');
+            Route::patch('{vehicle_id}','RideNowAPI\VehicleController@updateVehicle');
+            Route::delete('{vehicle_id}','RideNowAPI\VehicleController@deleteVehicle');
         });
         //Admin Route
         Route::group(['prefix'=>'admin'],function(){
