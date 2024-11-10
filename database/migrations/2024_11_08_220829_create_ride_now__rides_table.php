@@ -22,11 +22,14 @@ class CreateRideNowRidesTable extends Migration
             $table->enum('status', ['pending', 'confirmed', 'completed', 'canceled'])->default('pending');
             $table->decimal('base_cost', 8, 2);
             $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('vehicle_id');
+
             //Created_At and Updated_At
             $table->timestamps();
             
             // Set up the foreign key constraint, refer to user who created the rides
             $table->foreign('user_id')->references('id')->on('users');
+            $table->foreign('vehicle_id')->references('vehicle_id')->on('ride_now__vehicles');
         });
     }
 
