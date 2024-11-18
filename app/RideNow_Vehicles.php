@@ -32,4 +32,9 @@ class RideNow_Vehicles extends Model
     public function vehicleType(){
         return $this->belongsTo(RideNow_Vehicle_Types::class,'vehicle_type_id');
     }
+
+    public function rides()
+{
+    return $this->hasMany(RideNow_Rides::class, 'vehicle_id');
+}
 }

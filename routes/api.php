@@ -166,7 +166,16 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         });
         //Ride Route
         Route::group(['prefix' => 'ride'], function(){
-            Route::post('create','RideNowAPI\RideController@createRide');
+            Route::get('createdRides','RideNowAPI\RideController@getCreatedRides');
+            Route::get('joinedRides','RideNowAPI\RideController@getJoinedRides');
+            Route::get('','RideNowAPI\RideController@listAllAvailableRides');
+            Route::get('search','RideNowAPI\RideController@searchRide');
+            Route::get('details/{ride_id}','RideNowAPI\RideController@getRideDetails');
+            Route::post('','RideNowAPI\RideController@createRide');
+            //TODO: Attempt to join ride
+            Route::post('join/{ride_id}','RideNowAPI\RideController@joinRides');
+            Route::put('{ride_id}','RideNowAPI\RideController@updateRide');
+            Route::delete('{ride_id}','RideNowAPI\RideController@cancelRide');
         });
         //Vehicle Route
         Route::group(['prefix' => 'vehicle'], function(){ 

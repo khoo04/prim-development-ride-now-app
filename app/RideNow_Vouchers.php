@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class RideNow_Vouchers extends Model
 {
+    protected $primaryKey = 'voucher_id';
+    
     protected $fillable = [
         'amount',
         'status',

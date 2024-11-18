@@ -5,7 +5,6 @@ namespace App\Http\Controllers\RideNowAPI;
 use App\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
-use App\RideNow_Rides;
 use App\RideNow_Vehicle_Types;
 use App\RideNow_Vehicles;
 use Exception;

@@ -102,7 +102,7 @@ class User extends Authenticatable
 
     // Rides the user has created as a driver or organizer
     public function createdRides(){
-        return $this->hasMany(RideNow_Rides::class,'ride_id');
+        return $this->hasMany(RideNow_Rides::class,'user_id');
     }
 
     // Payments that belongs to users

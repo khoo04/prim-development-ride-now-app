@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 
 class RideNow_Payments extends Model
 {
+    protected $primaryKey = 'payment_id';
+
     protected $fillable = [
         'status',
         'amount',
