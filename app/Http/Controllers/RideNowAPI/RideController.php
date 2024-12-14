@@ -46,6 +46,7 @@ class RideController extends Controller
 
         try {
             $rides = RideNow_Rides::with(['driver', 'passengers', 'vehicle'])
+            ->where('status','=','confirmed')
             ->where('departure_time', '>', now()) // Filter rides with departure_time after the current time
             ->orderBy('departure_time', 'asc')
             ->paginate($perPage, ['*'], 'page', $page);
@@ -265,6 +266,8 @@ class RideController extends Controller
         if ($voucher != null){
             $amount_should_pay = max(0, $amount_should_pay - $voucher->amount);
         }
+
+        $amount_should_pay = $this->roundToNearestFiveCents($amount_should_pay);
 
         if ($amount_should_pay != $userPayAmount){
             return response()->json([
@@ -573,10 +576,12 @@ class RideController extends Controller
             $ride->status = 'canceled';
             $ride->save();
 
+            $ride->load(['driver', 'passengers', 'vehicle']);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ride canceled successfully',
-                'data' => $ride,
+                'data' => new RideNowRideResource($ride),
             ], 200);
         } catch (Exception $e) {
             return response()->json([
