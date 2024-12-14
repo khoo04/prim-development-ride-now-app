@@ -14,15 +14,15 @@ class CreateRideNowPaymentsTable extends Migration
     public function up()
     {
         Schema::create('ride_now__payments', function (Blueprint $table) {
-            $table->id('payment_id');
-            $table->enum('status',['pending','completed','failed'])->default('pending');
-            $table->decimal('amount',8,2);
+            $table->string('payment_id')->primary();
+            $table->enum('status', ['pending', 'completed', 'failed'])->default('pending');
+            $table->decimal('amount', 8, 2);
             $table->unsignedBigInteger('ride_id');
             $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('voucher_id');
+            $table->string('voucher_id')->nullable(); // Match data type and allow null
             $table->timestamps();
-
-            //Foreign Key
+        
+            // Foreign Keys
             $table->foreign('ride_id')->references('ride_id')->on('ride_now__rides');
             $table->foreign('user_id')->references('id')->on('users');
             $table->foreign('voucher_id')->references('voucher_id')->on('ride_now__vouchers');

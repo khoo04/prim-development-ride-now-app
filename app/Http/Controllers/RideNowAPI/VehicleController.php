@@ -52,7 +52,7 @@ class VehicleController extends Controller
                 ],
                 'manufacturer' => 'required | string',
                 'model' => 'required | string',
-                'seats' => 'required | string',
+                'seats' => 'required | integer',
                 'average_fuel_consumptions' => 'required| numeric',
                 'vehicle_type_id' => 'required | integer',
             ]
@@ -208,7 +208,7 @@ class VehicleController extends Controller
             return response()->json([
                 "data" => $vehicles,
                 "success" => true,
-                "message" => "Vehicle type retrieved successfully",
+                "message" => "Vehicles retrieved successfully",
             ], 200);
         } catch (Exception $e) {
             return response()->json([

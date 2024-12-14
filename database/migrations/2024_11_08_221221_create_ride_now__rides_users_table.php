@@ -24,7 +24,6 @@ class CreateRideNowRidesUsersTable extends Migration
             $table->foreign('ride_id')->references('ride_id')->on('ride_now__rides');
             //Refer to user who joined the rides
             $table->foreign('user_id')->references('id')->on('users');
-            
         });
     }
 

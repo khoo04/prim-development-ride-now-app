@@ -15,8 +15,14 @@ class CreateRideNowRidesTable extends Migration
     {
         Schema::create('ride_now__rides', function (Blueprint $table) {
             $table->id('ride_id');
-            $table->string('origin_address');
-            $table->string('destination_address');
+            $table->string('origin_name');
+            $table->string('origin_formatted_address');
+            $table->double('origin_latitude');
+            $table->double('origin_longitude');
+            $table->string('destination_name');
+            $table->string('destination_formatted_address');
+            $table->double('destination_latitude');
+            $table->double('destination_longitude');
             $table->dateTime('departure_time');
             //Default Pending Status
             $table->enum('status', ['pending', 'confirmed', 'completed', 'canceled'])->default('pending');

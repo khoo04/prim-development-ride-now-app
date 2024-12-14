@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
-use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use App\User;
 use Exception;
+use App\RideNow_UserDetails;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\RideNowUserResource;
 
 class AuthController extends Controller
 {
@@ -55,12 +57,15 @@ class AuthController extends Controller
 
         if (Auth::attempt($credentials)) {
             $user = Auth::user();
-            //$isAdmin = $user->hasRole('OrderS Admin');
+
             $token  = $user->createToken('auth_token')->plainTextToken;
+
+             // Ensure user details exist
+            $this->ensureUserDetailsExist($user->id);
 
             return response()->json([
                 "success" => true,
-                'data' => $user,
+                'data' => new RideNowUserResource($user),
                 'message' => 'Login success',
                 'access_token'  => $token,
                 //'isAdmin' => $isAdmin,
@@ -73,38 +78,64 @@ class AuthController extends Controller
         ], 401);
     }
 
-    public function logout() {
+    public function logout()
+    {
         $user = Auth::user();
 
-        try{
+        try {
             $user->tokens()->delete();
 
             return response()->json([
                 'success' => true,
                 'message' => 'Logout successfully',
-            ],200);
-        }catch (Exception $e){
+            ], 200);
+        } catch (Exception $e) {
             return response()->json([
                 "success" => false,
                 "message" => "Failed in logging out user",
             ], 500);
-        } 
+        }
     }
 
 
-    public function getUserData(Request $request){
+    public function getUserData(Request $request)
+    {
         $user = Auth::user();
-        if ($user != null){
+        
+        $this->ensureUserDetailsExist($user->id);
+
+        if ($user != null) {
             return  response()->json([
                 'success' => true,
-                'data' => $user,             
+                'data' => new RideNowUserResource($user),
                 //'isAdmin' => $isAdmin,
             ]);
-        }else {
+        } else {
             return response()->json([
                 'success' => false,
                 'message' => 'Unauthorized',
-            ],401);
+            ], 401);
+        }
+    }
+
+    /**
+     * Ensure user details exist for the given user ID.
+     *
+     * @param int $userId
+     * @return void
+     */
+    protected function ensureUserDetailsExist($userId)
+    {
+        // Check if the user_details entry exists
+        $userDetail = RideNow_UserDetails::where('user_id', $userId)->first();
+
+        // Create a new entry if it doesn't exist
+        if (!$userDetail) {
+            RideNow_UserDetails::create([
+                'user_id' => $userId,
+                'profile_picture' => null, // Default or null
+                'ratings' => null, // Default or null
+            ]);
         }
     }
 }

@@ -1,5 +1,6 @@
 <?php
 
+use App\RideNow_Vehicles;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -184,6 +185,7 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::patch('{vehicle_id}','RideNowAPI\VehicleController@updateVehicle');
             Route::delete('{vehicle_id}','RideNowAPI\VehicleController@deleteVehicle');
         });
+
         //Admin Route
         Route::group(['prefix'=>'admin'],function(){
             Route::get('shops','RideNowAPI\AdminController@getShop');
@@ -195,5 +197,11 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         Route::group(['prefix' => 'users'], function(){
             
         });
+    });
+
+    Route::group(['prefix' => 'payment'], function (){
+        Route::post('callback','RideNowAPI\PaymentController@paymentCallBack')->name('ride_now.payment_callback');
+        Route::get('testcallback','RideNowAPI\PaymentController@showTestCallBack')->name('ride_now.payment_testcallback');
+        Route::get('{transaction_token}','RideNowAPI\PaymentController@initPayment')->name('ride_now.payment');
     });
 });

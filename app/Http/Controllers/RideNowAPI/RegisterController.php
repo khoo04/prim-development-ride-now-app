@@ -2,17 +2,19 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
-use App\Http\Controllers\Controller;
 use App\User;
-use Illuminate\Foundation\Auth\RegistersUsers;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Validator;
+use App\RideNow_UserDetails;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Auth\Events\Registered;
 use App\Http\Controllers\PointController;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Validator;
+use App\Http\Resources\RideNowUserResource;
+use Illuminate\Foundation\Auth\RegistersUsers;
 
 
 class RegisterController extends Controller
@@ -55,7 +57,7 @@ class RegisterController extends Controller
             // Return the newly registered user along with the auth token
             return response()->json([
                 "success" => true,
-                'data' => $user,
+                'data' => new RideNowUserResource($user),
                 'message' => 'User registered successfully',
                 'access_token' => $token,
             ], 201);
@@ -123,10 +125,13 @@ class RegisterController extends Controller
                 'model_type' => "App\User",
                 'model_id' => $user->id,
             ]);
-        } else {
-            // Admin users don't have any additional steps
-            return $user;
-        }
+        } 
+
+        RideNow_UserDetails::create([
+            'user_id' => $user,
+            'profile_picture' => null, // Default to null 
+            'ratings' => null, // Default to null
+        ]);
 
         // Process referral code if provided
         $referral_code = $data['referral_code'] ?? 'YahyaNMd0005'; // Default referral code if not provided

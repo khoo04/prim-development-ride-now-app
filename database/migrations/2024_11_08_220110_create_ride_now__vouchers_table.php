@@ -14,7 +14,7 @@ class CreateRideNowVouchersTable extends Migration
     public function up()
     {
         Schema::create('ride_now__vouchers', function (Blueprint $table) {
-            $table->id('voucher_id');
+            $table->string('voucher_id')->primary(); // Custom voucher ID as primary key
             $table->decimal('amount',8,2);
             $table->boolean('redeemed');
             $table->unsignedBigInteger('user_id'); 

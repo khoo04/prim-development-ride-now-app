@@ -114,4 +114,10 @@ class User extends Authenticatable
     public function vehicles(){
         return $this->hasMany(RideNow_Vehicles::class,'user_id');
     }
+
+    //User Details 
+    public function userDetails()
+    {
+        return $this->hasOne(RideNow_UserDetails::class,'user_id');
+    }
 }
