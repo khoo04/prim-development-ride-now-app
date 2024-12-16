@@ -6,6 +6,7 @@ use Exception;
 use App\RideNow_Payments;
 use App\RideNow_UserDetails;
 use Illuminate\Http\Request;
+use App\RideNow_PaymentAllocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
@@ -43,8 +44,11 @@ class PaymentController extends Controller
 
         $fpx_buyerEmail = $payment->user->email;
         $fpx_buyerName = $payment->user->name;
-        $private_key = env('FPX_PRIVATE_KEY');
+        //TODO: Delete in production
+        $private_key = env('FPX_PRIVATE_KEY',"3c0e8bbc-88a2-4037-aa72-c6581a720670");
         $fpx_txnAmount = $payment->amount;
+
+        // dd(env('FPX_PRIVATE_KEY'));
 
         return view('ride_now.payment', compact(
             'fpx_buyerEmail',
@@ -100,24 +104,78 @@ class PaymentController extends Controller
 
                 // Check if user cannot join their own created ride to avoid duplicates
                 if ($ride->driver->id == $payment->user->id) {
+                    $paymentAllocation = RideNow_PaymentAllocation::create([
+                        'status' => 'pending',
+                        'description' => 'Ride completed income',
+                        'total_amount' => $payment->amount,
+                        'ride_id' => $ride->ride_id,
+                        'user_id' => $payment->user->id,
+                    ]);
+
+                    $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
+                    $payment->save();
+                    
                     return response()->json([
-                        "data" => null,
+                        "data" => NULL,
                         "success" => false,
-                        "message" => "User cannot join their own ride",
+                        "message" => "User cannot join their own ride. Contact admin for refund",
                     ], 409); // 409 Conflict
                 }
 
                 // Check if user is already joined to avoid duplicates
                 if ($ride->passengers()->where('user_id', $payment->user->id)->exists()) {
+                    $paymentAllocation = RideNow_PaymentAllocation::create([
+                        'status' => 'pending',
+                        'description' => 'Ride completed income',
+                        'total_amount' => $payment->amount,
+                        'ride_id' => $ride->ride_id,
+                        'user_id' => $payment->user->id,
+                    ]);
+
+                    $payment->payment_allocation_id =  $paymentAllocation->payment_allocation_id;
+                    $payment->save();
+                
+
                     return response()->json([
-                        "data" => null,
+                        "data" => "refund",
                         "success" => false,
-                        "message" => "User is already joined in this ride",
+                        "message" => "User is already joined in this ride. Contact admin for refund",
                     ], 409); // 409 Conflict
                 }
 
+                //Retrieve vehicle seat count
+                $vehicleSeats = $ride->vehicle->seats;
 
-                $ride->passengers()->attach($payment->user->id);
+                $currentPassengersCount = $ride->passengers()->count();
+
+                $requiredSeats = $payment->required_seats;
+
+                $currentAvailableSeats = $vehicleSeats - $currentPassengersCount;
+                if ($requiredSeats > $currentAvailableSeats) {
+                    
+                    $paymentAllocation = RideNow_PaymentAllocation::create([
+                        'status' => 'pending',
+                        'description' => 'Ride completed income',
+                        'total_amount' => $payment->amount,
+                        'ride_id' => $ride->ride_id,
+                        'user_id' => $payment->user->id,
+                    ]);
+
+                    $payment->payment_allocation_id =  $paymentAllocation->payment_allocation_id;
+                    $payment->save();
+
+                    return response()->json([
+                        "data" => $payment,
+                        "success" => false,
+                        "message" => "The required seats is exceed the current vehicle available seats",
+                    ], 403); // 403 Forbidden
+                }
+        
+
+                // Loop through the required seats and attach the user for each seat
+                for ($i = 0; $i < $requiredSeats; $i++) {
+                    $ride->passengers()->attach($payment->user->id);
+                }
 
                 $ride->refresh();
 

@@ -25,7 +25,7 @@ class CreateRideNowRidesTable extends Migration
             $table->double('destination_longitude');
             $table->dateTime('departure_time');
             //Default Pending Status
-            $table->enum('status', ['pending', 'confirmed', 'completed', 'canceled'])->default('pending');
+            $table->enum('status', ['pending', 'confirmed', 'started', 'completed', 'canceled'])->default('pending');
             $table->decimal('base_cost', 8, 2);
             $table->unsignedBigInteger('user_id');
             $table->unsignedBigInteger('vehicle_id');

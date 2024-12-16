@@ -40,4 +40,8 @@ class RideNow_Rides extends Model
     public function vehicle(){
         return $this->belongsTo(RideNow_Vehicles::class, 'vehicle_id');
     }
+
+    public function payments(){
+        return $this->hasMany(RideNow_Payments::class,'ride_id');
+    }
 }

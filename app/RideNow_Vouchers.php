@@ -17,6 +17,12 @@ class RideNow_Vouchers extends Model
         'user_id',
     ];
 
+    protected $casts = [
+        'amount' => 'float',
+        'redeemed' => 'boolean',
+    ];
+    
+
     public static function boot()
     {
         parent::boot();

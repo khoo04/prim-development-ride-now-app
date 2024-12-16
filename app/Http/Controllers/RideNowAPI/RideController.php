@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\RideNowRideResource;
+use App\RideNow_PaymentAllocation;
 
 class RideController extends Controller
 {
@@ -46,11 +47,10 @@ class RideController extends Controller
 
         try {
             $rides = RideNow_Rides::with(['driver', 'passengers', 'vehicle'])
-            ->where('status','=','confirmed')
-            ->where('departure_time', '>', now()) // Filter rides with departure_time after the current time
-            ->orderBy('departure_time', 'asc')
-            ->paginate($perPage, ['*'], 'page', $page);
-            
+                ->where('status', '=', 'confirmed')
+                ->where('departure_time', '>', now()) // Filter rides with departure_time after the current time
+                ->orderBy('departure_time', 'asc')
+                ->paginate($perPage, ['*'], 'page', $page);
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -113,7 +113,7 @@ class RideController extends Controller
                 });
 
             // Conditionally add destination filtering
-            if ($destinationName && $destinationName !="Any Places" || $destinationFormattedAddress && $destinationFormattedAddress !="Any Places") {
+            if ($destinationName && $destinationName != "Any Places" || $destinationFormattedAddress && $destinationFormattedAddress != "Any Places") {
                 $rides->where(function ($query) use ($destinationName, $destinationFormattedAddress) {
                     if ($destinationName) {
                         $query->where('destination_name', 'LIKE', "%{$destinationName}%");
@@ -158,9 +158,6 @@ class RideController extends Controller
 
         try {
             $joinedRides = $user->joinedRides()->with(['driver', 'passengers', 'vehicle'])->get();
-
-
-
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -227,7 +224,8 @@ class RideController extends Controller
             $request->all(),
             [
                 'payment_amount' => 'required | numeric',
-                'voucher_id' => 'sometimes | nullable | integer',
+                'voucher_id' => 'sometimes | nullable | string',
+                'required_seats' => 'required | numeric',
             ]
         );
 
@@ -240,18 +238,43 @@ class RideController extends Controller
         }
 
         $userPayAmount = $request['payment_amount'];
-        $voucherId = $request['voucher_id'];
+        $voucherId = $request['voucher_id'] ?? null;
+        $requiredSeats = $request['required_seats'];
 
-        $amount_should_pay = $ride->base_cost;
+        if ($requiredSeats <= 0) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "Invalid number of required seats",
+            ], 400); // 400 Bad Request
+        }
 
-        if($currentPassengersCount > 1){
-            $amount_should_pay = $ride->base_cost * (1-0.2);
+        $currentAvailableSeats = $vehicleSeats - $currentPassengersCount;
+        if ($requiredSeats > $currentAvailableSeats) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "The required seats is exceed the current vehicle available seats",
+            ], 403); // 403 Forbidden
+        }
+
+        //Initialize
+        $subtotal = 0;
+
+        $discountedCost = $this->roundToNearestFiveCents($ride->base_cost * 0.8);
+
+        if ($currentPassengersCount > 1) {
+            // Case: Ride already has one or more passengers
+            $subtotal = $discountedCost * $requiredSeats;
+        } else {
+            // Case: Ride has no passengers
+            $subtotal = $ride->base_cost + $discountedCost * ($requiredSeats - 1);
         }
 
         //Retrieve voucher
         $voucher = null; // Initialize the voucher variable
-        
-        if ($voucherId != null){
+
+        if ($voucherId != null) {
             try {
                 $voucher = RideNow_Vouchers::findOrFail($voucherId);
             } catch (Exception $e) {
@@ -262,14 +285,25 @@ class RideController extends Controller
                 ], 404);
             }
         }
-     
-        if ($voucher != null){
-            $amount_should_pay = max(0, $amount_should_pay - $voucher->amount);
+
+        if ($voucher != null) {
+            $subtotal = max(0, $subtotal - $voucher->amount);
         }
 
+
+
+        // Step 4: Apply platform charge (5%)
+        $platformCharge = $this->roundToNearestFiveCents($subtotal * 0.05);
+        $amount_should_pay = $subtotal + $platformCharge;
+
+        // Step 5: Add bank service charge
+        $bankServiceCharge = 0.70;
+        $amount_should_pay += $bankServiceCharge;
+
+        // Step 6: Round to nearest 5 cents
         $amount_should_pay = $this->roundToNearestFiveCents($amount_should_pay);
 
-        if ($amount_should_pay != $userPayAmount){
+        if ($amount_should_pay != $userPayAmount) {
             return response()->json([
                 "data" => [
                     "should" => $amount_should_pay,
@@ -284,18 +318,19 @@ class RideController extends Controller
         $appliedVoucherId = $voucher ? $voucher->id : null;
         //Generate Order No
         // Generate a unique order number (payment ID)
-        $fpx_sellerExOrderNo = 'RideNow_TRANS-'. now()->format('YmdHis');
+        $fpx_sellerExOrderNo = 'RideNow_TRANS-' . now()->format('YmdHis');
 
-        try{
+        try {
             RideNow_Payments::create([
                 'payment_id' => $fpx_sellerExOrderNo,
                 'status' => 'pending', // Default status
+                'required_seats' => $requiredSeats,
                 'amount' => $fpx_txnAmount,
                 'user_id' => $user->id,
                 'ride_id' => $ride->ride_id,
                 'voucher_id' => $appliedVoucherId ?? null, // Optional
             ]);
-        } catch (Exception $e){
+        } catch (Exception $e) {
             return response()->json([
                 "data" => $e,
                 "user" => $user->id,
@@ -415,7 +450,6 @@ class RideController extends Controller
                     $ride->save(); // Save the updated status to the database
                 }
             }
-
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -474,9 +508,9 @@ class RideController extends Controller
                             ->where('departure_time', $value)
                             ->first();
 
-                            if ($existingRide && $existingRide->id !== $ride_id) {
-                                $fail('You already have a ride scheduled at this departure time.');
-                            }
+                        if ($existingRide && $existingRide->id !== $ride_id) {
+                            $fail('You already have a ride scheduled at this departure time.');
+                        }
                     },
                 ],
                 'base_cost' => 'sometimes | numeric',
@@ -592,7 +626,8 @@ class RideController extends Controller
         }
     }
 
-    public function completeRide($ride_id){
+    public function completeRide($ride_id)
+    {
         $user = Auth::user();
 
         try {
@@ -613,48 +648,89 @@ class RideController extends Controller
             ], 401);
         }
 
+        $ride->payments()->where('payment_allocation_id', '=', NULL)->where('status', '=', 'completed')->get();
+
+
         try {
+            $payments = $ride->payments()
+                ->where('payment_allocation_id', '=', NULL)
+                ->where('status', '=', 'completed')
+                ->get();
+
+            // Calculate the cumulative payment amount
+            $cumulativePaymentAmount = $payments->reduce(function ($total, $payment) {
+                // Reverse the charges to calculate the original amount
+                $amountBeforeBankCharge = ($payment->amount - 0.70); // Remove bank service charge
+                $originalAmount = $amountBeforeBankCharge / 1.05;   // Remove 5% platform service charge
+
+                // Add the original amount to the total
+                return $total + $originalAmount;
+            }, 0);
+
             $joinedPassengersCount = $ride->passengers()->count();
 
+            $driverEarning = $this->roundToNearestFiveCents($cumulativePaymentAmount);
+
             if ($joinedPassengersCount >= 2) {
+
                 // Find the first user who joined the ride
                 $firstJoinedPassenger = $ride->passengers()
-                    ->where('joined', true)
                     ->orderBy('created_at', 'asc')
                     ->first();
-            
+
+                $voucherValue =  $this->roundToNearestFiveCents($ride->base_cost * 0.3);
+
+
                 if ($firstJoinedPassenger) {
                     // Grant a voucher to the first joined user
                     RideNow_Vouchers::create([
                         'user_id' => $firstJoinedPassenger->id,
-                        'amount' => 10, // Amount should depends on the total ride fees
+                        'amount' =>  $voucherValue,
                         'redeemed' => false,
                     ]);
+
+                    $driverEarning = $this->roundToNearestFiveCents($driverEarning - $voucherValue);
                 }
+            }
+
+            $paymentAllocation = RideNow_PaymentAllocation::create([
+                'status' => 'pending',
+                'description' => 'Ride complete income',
+                'total_amount' => $driverEarning,
+                'ride_id' => $ride->ride_id,
+                'user_id' => $ride->driver->id,
+            ]);
+
+            foreach ($payments as $payment) {
+                $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
+                $payment->save();
             }
 
             $ride->status = 'completed';
             $ride->save();
 
+            $ride->load(['driver', 'passengers', 'vehicle']);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ride completed successfully',
-                'data' => $ride,
+                'data' => new RideNowRideResource($ride),
             ], 200);
         } catch (Exception $e) {
             return response()->json([
-                "data" => NULL,
+                "data" => $e,
                 "success" => false,
-                "message" => "Exception occurred in canceling ride",
+                "message" => "Exception occurred in completing ride",
             ], 500);
         }
     }
 
     //Utils
-    private function roundToNearestFiveCents($totalAmount) {
+    private function roundToNearestFiveCents($totalAmount)
+    {
         // Extract the last digit of cents
         $cents = round($totalAmount * 100) % 10;
-    
+
         if (in_array($cents, [1, 2, 6, 7])) {
             // Round down to the nearest 0.05
             return floor($totalAmount * 20) / 20;
@@ -663,7 +739,6 @@ class RideController extends Controller
             return ceil($totalAmount * 20) / 20;
         }
         // If already a multiple of 5 cents (0 or 5), return as is
-        return number_format($totalAmount, 2, '.', '');
+        return (float) number_format($totalAmount, 2, '.', '');
     }
-    
 }
