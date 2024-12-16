@@ -173,8 +173,8 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::get('search','RideNowAPI\RideController@searchRide');
             Route::get('details/{ride_id}','RideNowAPI\RideController@getRideDetails');
             Route::post('','RideNowAPI\RideController@createRide');
-            //TODO: Attempt to join ride
             Route::post('join/{ride_id}','RideNowAPI\RideController@joinRides');
+            Route::post('complete/{ride_id}','RideNowAPI\RideController@completeRide');
             Route::put('{ride_id}','RideNowAPI\RideController@updateRide');
             Route::delete('{ride_id}','RideNowAPI\RideController@cancelRide');
         });
@@ -185,7 +185,9 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::patch('{vehicle_id}','RideNowAPI\VehicleController@updateVehicle');
             Route::delete('{vehicle_id}','RideNowAPI\VehicleController@deleteVehicle');
         });
-
+        Route::group(['prefix' => 'users'], function(){ 
+            Route::get('vouchers','RideNowAPI\ProfileController@listUserVouchers');
+        });
         //Admin Route
         Route::group(['prefix'=>'admin'],function(){
             Route::get('shops','RideNowAPI\AdminController@getShop');
@@ -194,9 +196,6 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::put('dishes','RideNowAPI\AdminController@updateDishes');
             Route::delete('dishes','RideNowAPI\AdminController@deleteDishes');
         });  
-        Route::group(['prefix' => 'users'], function(){
-            
-        });
     });
 
     Route::group(['prefix' => 'payment'], function (){
