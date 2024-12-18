@@ -96,7 +96,6 @@ class User extends Authenticatable
     public function joinedRides(){
         return $this
         ->belongsToMany(RideNow_Rides::class,'ride_now__rides_users','user_id','ride_id')
-        ->withPivot('joined')
         ->withTimestamps();
     }
 

@@ -154,8 +154,9 @@ Route::group(['prefix' => 'RideNowV1'], function(){
     Route::group(['prefix' => 'vehicle'], function(){
         Route::get('types','RideNowAPI\VehicleController@listVehicleType');
     });
-    Route::group(['prefix' => 'test', 'middleware' => 'auth:sanctum'], function(){
+    Route::group(['prefix' => 'test'], function(){
        Route::get('getRoles','RideNowAPI\TestController@getRoles');
+       Route::post('message','RideNowAPI\TestController@testMessage');
     });
 
     //Authenticated Route
@@ -202,5 +203,8 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         Route::post('callback','RideNowAPI\PaymentController@paymentCallBack')->name('ride_now.payment_callback');
         Route::get('testcallback','RideNowAPI\PaymentController@showTestCallBack')->name('ride_now.payment_testcallback');
         Route::get('{transaction_token}','RideNowAPI\PaymentController@initPayment')->name('ride_now.payment');
+    });
+    Route::group(['prefix' => 'pusher'], function(){
+        
     });
 });

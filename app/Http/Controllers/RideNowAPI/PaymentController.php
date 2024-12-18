@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
+use App\Events\PaymentStatusChanged;
 use Exception;
 use App\RideNow_Payments;
 use App\RideNow_UserDetails;
@@ -45,7 +46,7 @@ class PaymentController extends Controller
         $fpx_buyerEmail = $payment->user->email;
         $fpx_buyerName = $payment->user->name;
         //TODO: Delete in production
-        $private_key = env('FPX_PRIVATE_KEY',"3c0e8bbc-88a2-4037-aa72-c6581a720670");
+        $private_key = env('FPX_PRIVATE_KEY', "3c0e8bbc-88a2-4037-aa72-c6581a720670");
         $fpx_txnAmount = $payment->amount;
 
         // dd(env('FPX_PRIVATE_KEY'));
@@ -106,7 +107,7 @@ class PaymentController extends Controller
                 if ($ride->driver->id == $payment->user->id) {
                     $paymentAllocation = RideNow_PaymentAllocation::create([
                         'status' => 'pending',
-                        'description' => 'Ride completed income',
+                        'description' => 'Refund to users due to user trying to join their own created ride',
                         'total_amount' => $payment->amount,
                         'ride_id' => $ride->ride_id,
                         'user_id' => $payment->user->id,
@@ -114,7 +115,7 @@ class PaymentController extends Controller
 
                     $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
                     $payment->save();
-                    
+
                     return response()->json([
                         "data" => NULL,
                         "success" => false,
@@ -126,7 +127,7 @@ class PaymentController extends Controller
                 if ($ride->passengers()->where('user_id', $payment->user->id)->exists()) {
                     $paymentAllocation = RideNow_PaymentAllocation::create([
                         'status' => 'pending',
-                        'description' => 'Ride completed income',
+                        'description' => 'Refund to user due to user was trying to join their joined ride',
                         'total_amount' => $payment->amount,
                         'ride_id' => $ride->ride_id,
                         'user_id' => $payment->user->id,
@@ -134,7 +135,7 @@ class PaymentController extends Controller
 
                     $payment->payment_allocation_id =  $paymentAllocation->payment_allocation_id;
                     $payment->save();
-                
+
 
                     return response()->json([
                         "data" => "refund",
@@ -152,7 +153,7 @@ class PaymentController extends Controller
 
                 $currentAvailableSeats = $vehicleSeats - $currentPassengersCount;
                 if ($requiredSeats > $currentAvailableSeats) {
-                    
+
                     $paymentAllocation = RideNow_PaymentAllocation::create([
                         'status' => 'pending',
                         'description' => 'Ride completed income',
@@ -170,7 +171,7 @@ class PaymentController extends Controller
                         "message" => "The required seats is exceed the current vehicle available seats",
                     ], 403); // 403 Forbidden
                 }
-        
+
 
                 // Loop through the required seats and attach the user for each seat
                 for ($i = 0; $i < $requiredSeats; $i++) {
@@ -181,6 +182,8 @@ class PaymentController extends Controller
 
                 // Reload ride with relationships
                 $ride->load(['driver', 'passengers', 'vehicle']);
+
+                event(new PaymentStatusChanged($ride, $payment, $payment->user->id, true, "Payment successfully"));
 
                 return response()->json([
                     'success' => true,
@@ -197,6 +200,8 @@ class PaymentController extends Controller
         } else {
             $payment->status = 'failed';
             $payment->save();
+
+            event(new PaymentStatusChanged(null, $payment, $payment->user->id, false, "Payment failed"));
 
             return response()->json([
                 "data" => null,

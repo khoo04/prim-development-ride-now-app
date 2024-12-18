@@ -37,10 +37,10 @@ return [
             'app_id' => env('PUSHER_APP_ID'),
             'options' => [
                 'cluster' => env('PUSHER_APP_CLUSTER'),
-                'host'=>env('LARAVEL_WEBSOCKET_HOST'),
-                'port'=>env('LARAVEL_WEBSOCKET_PORT'),
+                // 'host'=>env('LARAVEL_WEBSOCKET_HOST'),
+                // 'port'=>env('LARAVEL_WEBSOCKET_PORT'),
                 'scheme'=>'http',
-                'encrypted' => true,  // You can enable encryption if needed
+                'encrypted' => false,  // You can enable encryption if needed
             ],
         ],
 

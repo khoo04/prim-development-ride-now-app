@@ -4,7 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateRideNowRidesUsersTable extends Migration
+class CreateRideNowPaymentAllocationsTable extends Migration
 {
     /**
      * Run the migrations.
@@ -13,17 +13,17 @@ class CreateRideNowRidesUsersTable extends Migration
      */
     public function up()
     {
-        Schema::create('ride_now__rides_users', function (Blueprint $table) {
-            $table->id();
+        Schema::create('ride_now__payment_allocations', function (Blueprint $table) {
+            $table->id('payment_allocation_id');
+            $table->string('description');
+            $table->enum('status', ['pending', 'completed'])->default('pending');
+            $table->decimal('amount', 8, 2);
             $table->unsignedBigInteger('ride_id');
             $table->unsignedBigInteger('user_id');
 
-            $table->timestamps();
-
-            //Foreign Key
             $table->foreign('ride_id')->references('ride_id')->on('ride_now__rides');
-            //Refer to user who joined the rides
             $table->foreign('user_id')->references('id')->on('users');
+            $table->timestamps();
         });
     }
 
@@ -34,6 +34,6 @@ class CreateRideNowRidesUsersTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('ride_now__rides_users');
+        Schema::dropIfExists('ride_now__payment_allocations');
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
+use App\Events\RideStatusChanged;
 use App\User;
 use Exception;
 use App\RideNow_Rides;
@@ -568,6 +569,7 @@ class RideController extends Controller
 
             $ride->refresh();
 
+            event(new RideStatusChanged($ride));
 
             return response()->json([
                 'success' => true,
@@ -611,6 +613,8 @@ class RideController extends Controller
             $ride->save();
 
             $ride->load(['driver', 'passengers', 'vehicle']);
+
+            event(new RideStatusChanged($ride));
 
             return response()->json([
                 'success' => true,
@@ -710,6 +714,8 @@ class RideController extends Controller
             $ride->save();
 
             $ride->load(['driver', 'passengers', 'vehicle']);
+
+            event(new RideStatusChanged($ride));
 
             return response()->json([
                 'success' => true,
