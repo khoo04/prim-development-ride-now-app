@@ -128,7 +128,7 @@ class RegisterController extends Controller
         } 
 
         RideNow_UserDetails::create([
-            'user_id' => $user,
+            'user_id' => $user->id,
             'profile_picture' => null, // Default to null 
             'ratings' => null, // Default to null
         ]);
