@@ -23,4 +23,17 @@ class AppServiceProvider extends ServiceProvider
               });
         }
     }
+
+      /**
+     * Bootstrap any application services.
+     *
+     * @return void
+     */
+    public function boot()
+    {
+        // Force HTTPS for all URLs in production or staging
+        if (config('app.env') == 'production' || config('app.env') == 'staging') {
+            URL::forceScheme('https');
+        }
+    }
 }
