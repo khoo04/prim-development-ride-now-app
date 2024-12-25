@@ -14,7 +14,7 @@ class TestController extends Controller
 {
     public function getRoles()
     {
-        event(new RideStatusChanged("hELLO"));
+        //event(new RideStatusChanged("hELLO"));
 
         return response()->json(["success" => true]);
     }

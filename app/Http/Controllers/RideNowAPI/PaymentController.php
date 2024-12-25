@@ -183,7 +183,7 @@ class PaymentController extends Controller
                 // Reload ride with relationships
                 $ride->load(['driver', 'passengers', 'vehicle']);
 
-                event(new PaymentStatusChanged($ride, $payment, $payment->user->id, true, "Payment successfully"));
+                event(new PaymentStatusChanged($ride, $payment, $payment->user, true, "Payment successfully"));
 
                 return response()->json([
                     'success' => true,
@@ -201,7 +201,7 @@ class PaymentController extends Controller
             $payment->status = 'failed';
             $payment->save();
 
-            event(new PaymentStatusChanged(null, $payment, $payment->user->id, false, "Payment failed"));
+            event(new PaymentStatusChanged(null, $payment, $payment->user, false, "Payment failed"));
 
             return response()->json([
                 "data" => null,

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
-use App\Events\RideStatusChanged;
 use App\User;
 use Exception;
 use App\RideNow_Rides;
@@ -11,12 +10,17 @@ use App\RideNow_Vehicles;
 use App\RideNow_Vouchers;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
+use App\Events\RideStatusChanged;
+use App\RideNow_PaymentAllocation;
+use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Validator;
+use App\Events\NotifyRidePassengersStarted;
 use App\Http\Resources\RideNowRideResource;
-use App\RideNow_PaymentAllocation;
+use App\Events\NotifyRidePassengersCompleted;
 
 class RideController extends Controller
 {
@@ -60,10 +64,15 @@ class RideController extends Controller
             ], 500);
         }
 
+        $rides = $rides->items()->map(function ($ride) {
+            return new RideNowRideResource($ride); // Pass currentUserId to the resource
+        });
+
+
         return response()->json([
             'success' => true,
             'message' => 'Successfully retrieved page ' . $page . ' with up to ' . $perPage . ' rides per page.',
-            'data' => RideNowRideResource::collection($rides->items()),
+            'data' => $rides,
         ], 200);
     }
 
@@ -144,11 +153,16 @@ class RideController extends Controller
             ], 500);
         }
 
+        $rides = $rides->map(function ($ride) {
+            return new RideNowRideResource($ride); // Pass currentUserId to the resource
+        });
+
+
         // Return the results
         return response()->json([
             'success' => true,
             'message' => 'Rides information with ' . $seats . ' seats from ' . $originFormattedAddress . ' to ' . $destinationFormattedAddress . ' on ' . $departureTime,
-            'data' => RideNowRideResource::collection($rides),
+            'data' => $rides,
         ], 200);
     }
 
@@ -158,7 +172,11 @@ class RideController extends Controller
         $user = Auth::user();
 
         try {
-            $joinedRides = $user->joinedRides()->with(['driver', 'passengers', 'vehicle'])->get();
+            $joinedRides = $user->joinedRides()->with(['driver', 'passengers', 'vehicle', 'ratings'])->distinct('ride_id')->get();
+
+            $joinedRides = $joinedRides->map(function ($ride) use ($user) {
+                return new RideNowRideResource($ride, $user->id); // Pass currentUserId to the resource
+            });
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -170,7 +188,7 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'List of joined rides for user ' . $user->name,
-            'data' =>  RideNowRideResource::collection($joinedRides),
+            'data' =>   $joinedRides,
         ], 200);
     }
 
@@ -459,10 +477,15 @@ class RideController extends Controller
             ], 500);
         }
 
+        $rides = $rides->map(function ($ride) use ($user) {
+            return new RideNowRideResource($ride, $user->id); // Pass currentUserId to the resource
+        });
+
+
         return response()->json([
             'success' => true,
             'message' => 'List of created rides for user ' . $user->name,
-            'data' => RideNowRideResource::collection($rides),
+            'data' => $rides,
         ], 200);
     }
 
@@ -630,6 +653,66 @@ class RideController extends Controller
         }
     }
 
+    public function startRide($ride_id)
+    {
+        $user = Auth::user();
+
+        try {
+            $ride = RideNow_Rides::findOrFail($ride_id);
+        } catch (Exception $e) {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride not found",
+            ], 404);
+        }
+
+        if ($ride->user_id != $user->id) {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Unauthorized access",
+            ], 401);
+        }
+
+        
+        if ($ride->status != 'confirmed'){
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride is already started / completed / canceled",
+            ], 403);
+        }
+
+        try {
+            $ride->status = 'started';
+            $ride->save();
+
+            $ride->load(['driver', 'passengers', 'vehicle', 'ratings']);
+
+            
+            $distinctPassengers = $ride->passengers()->distinct('id')->get();
+
+            event(new RideStatusChanged($ride));
+
+            foreach ($distinctPassengers as $passenger) {
+                event(new NotifyRidePassengersStarted($passenger, $ride));
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Ride started successfully',
+                'data' => new RideNowRideResource($ride),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "data" => $e,
+                "success" => false,
+                "message" => "Exception occurred in starting ride",
+            ], 500);
+        }
+    }
+
     public function completeRide($ride_id)
     {
         $user = Auth::user();
@@ -651,6 +734,15 @@ class RideController extends Controller
                 "message" => "Unauthorized access",
             ], 401);
         }
+
+        if ($ride->status != 'started') {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride is already completed or has not started.",
+            ], 403);
+        }
+        
 
         $ride->payments()->where('payment_allocation_id', '=', NULL)->where('status', '=', 'completed')->get();
 
@@ -717,6 +809,12 @@ class RideController extends Controller
 
             event(new RideStatusChanged($ride));
 
+            $distinctPassengers = $ride->passengers()->distinct('id')->get();
+
+            foreach ($distinctPassengers as $passenger) {
+                event(new NotifyRidePassengersCompleted($passenger, $ride));
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Ride completed successfully',
@@ -729,6 +827,105 @@ class RideController extends Controller
                 "message" => "Exception occurred in completing ride",
             ], 500);
         }
+    }
+
+
+    public function rateRide(Request $request, $ride_id)
+    {
+        $user = Auth::user();
+
+
+        try {
+            $ride = RideNow_Rides::findOrFail($ride_id);
+        } catch (Exception $e) {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride not found",
+            ], 404);
+        }
+
+        if ($ride->status != 'completed') {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "This ride cannot be rated because it is not completed.",
+            ], 401);
+        }
+
+        if (!$ride->passengers->contains('id', $user->id)) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "You are not a passenger on this ride.",
+            ], 403); // Use 403 Forbidden for unauthorized actions
+        }
+
+        $validator = Validator::make(
+            $request->all(),
+            [
+                'rating' => 'required|numeric|min:1|max:5',
+            ]
+        );
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Validation failed',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        $existingRating = DB::table('ride_now__rides_rating')
+            ->where('ride_id', $ride->ride_id)
+            ->where('user_id', $user->id)
+            ->first();
+
+        if ($existingRating) {
+            // User has already rated the ride
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "You have already rated this ride.",
+            ], 400);
+        }
+
+
+        $ride->ratings()->attach([
+            $user->id => [
+                'rating' => $request['rating'],
+                'created_at' => Carbon::now(),  // or you can use `now()` helper as well
+                'updated_at' => Carbon::now(),
+            ],
+        ]);
+
+        //Retrieve driver
+        $driver = $ride->driver;
+        // Update the driver's overall rating
+        if ($driver && $driver->userDetails) {
+            $userDetails = $driver->userDetails;
+
+            // Fetch all ratings for rides created by the driver
+            $totalRatings = DB::table('ride_now__rides_rating')
+                ->whereIn('ride_id', $driver->createdRides()->pluck('ride_id'))
+                ->count();
+
+            // Ensure there is at least one rating to avoid division by zero
+            if ($totalRatings > 0) {
+                $existingRating = $userDetails->ratings ?? 0;
+
+                // Calculate the new average rating
+                $newAverageRating = (($existingRating * ($totalRatings - 1)) + $request['rating']) / $totalRatings;
+
+                // Update the user's details with the new average rating
+                $userDetails->update(['ratings' => $newAverageRating]);
+            }
+        }
+        return response()->json([
+            "data" => null,
+            "success" => true,
+            "message" => "Ride rated successfully",
+        ], 200); // 
     }
 
     //Utils

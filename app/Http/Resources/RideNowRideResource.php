@@ -2,10 +2,44 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class RideNowRideResource extends JsonResource
 {
+    protected $userId;
+
+    /**
+     * Inject user into the resource.
+     */
+    public function __construct($resource, $userId = null)
+    {
+        parent::__construct($resource);
+        $this->userId = $userId ?? Auth::id();
+    }
+
+
+    /**
+     * Determine if the user has rated the ride.
+     */
+    protected function getIsRatedForUser($userId)
+    {
+        // First check if the user is a passenger
+        $isPassenger = $this->passengers->contains('id', $userId);
+
+        if (!$isPassenger) {
+            return null;
+        }
+
+        // Check if ratings relationship is loaded
+        if (!$this->relationLoaded('ratings')) {
+            return null;
+        }
+
+        // Find if the user has rated this ride
+        return $this->ratings->contains('user_id', $userId);
+    }
+
     /**
      * Transform the resource into an array.
      *
@@ -14,6 +48,8 @@ class RideNowRideResource extends JsonResource
      */
     public function toArray($request)
     {
+        $isRated = $this->getIsRatedForUser($this->userId);
+
         return [
             'ride_id' => $this->ride_id,
             'origin' => [
@@ -32,8 +68,9 @@ class RideNowRideResource extends JsonResource
             'status' => $this->status,
             'base_cost' => $this->base_cost,
             'driver' => new RideNowUserResource($this->whenLoaded('driver')),
-            'passengers' =>  RideNowUserResource::collection($this->whenLoaded('passengers')),
-            'vehicle' => $this->whenLoaded('vehicle'), 
+            'passengers' => RideNowUserResource::collection($this->whenLoaded('passengers')),
+            'isRated' => $isRated,
+            'vehicle' => $this->whenLoaded('vehicle'),
         ];
     }
 }

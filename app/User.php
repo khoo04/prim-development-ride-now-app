@@ -99,6 +99,11 @@ class User extends Authenticatable
         ->withTimestamps();
     }
 
+    public function ratings(){
+        return $this->belongsToMany(User::class,'ride_now__rides_rating','user_id','ride_id')
+        ->withPivot('rating');
+    }
+
     // Rides the user has created as a driver or organizer
     public function createdRides(){
         return $this->hasMany(RideNow_Rides::class,'user_id');

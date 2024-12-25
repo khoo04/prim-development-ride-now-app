@@ -2,8 +2,6 @@
 
 namespace App\Events;
 
-use App\RideNow_Rides;
-use App\RideNow_Payments;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Queue\SerializesModels;
 use App\Http\Resources\RideNowRideResource;
@@ -13,32 +11,22 @@ use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 
-class PaymentStatusChanged implements ShouldBroadcast
+class NotifyRidePassengersCompleted implements ShouldBroadcast
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
     protected $user;
-    protected $ride; // Removed type hint
-    protected $payment; // Removed type hint
-    protected $success;
-    protected $message;
+    protected $ride;
 
     /**
      * Create a new event instance.
      *
-     * @param RideNow_Rides|null $ride
-     * @param RideNow_Payments $payment
-     * @param int $userId
-     * @param bool $success
-     * @param string $message
+     * @return void
      */
-    public function __construct($ride, $payment, $user, $success, $message)
+    public function __construct($user, $ride)
     {
-        $this->ride = $ride; // Nullable ride assignment
-        $this->payment = $payment;
         $this->user = $user;
-        $this->success = $success;
-        $this->message = $message;
+        $this->ride= $ride;
     }
 
     /**
@@ -53,23 +41,22 @@ class PaymentStatusChanged implements ShouldBroadcast
 
     public function broadcastAs()
     {
-        return 'payment.status.changed';
+        return 'joinedRide.status.completed';
     }
 
-    /**
+     /**
      * Data sent with the broadcast.
      *
      * @return array
      */
     public function broadcastWith()
     {
+        $this->ride->load(['driver', 'passengers', 'vehicle','ratings']);
+        
         return [
-            "success" => $this->success,
-            'message' => $this->message,
-            "data" => [
-                "ride" => $this->ride ? new RideNowRideResource($this->ride,$this->user) : null,
-                "payment" => $this->payment,
-            ],
+            "success" => true,
+            'message' => "Ride completed",
+            "data" => new RideNowRideResource($this->ride,$this->user->id),
         ];
     }
 }

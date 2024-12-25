@@ -36,6 +36,11 @@ class RideNow_Rides extends Model
         ->withTimestamps();
     }
 
+    public function ratings(){
+        return $this->belongsToMany(User::class,'ride_now__rides_rating','ride_id','user_id')
+        ->withPivot('rating');
+    }
+
     public function vehicle(){
         return $this->belongsTo(RideNow_Vehicles::class, 'vehicle_id');
     }
