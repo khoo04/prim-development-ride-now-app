@@ -64,8 +64,8 @@ class RideController extends Controller
             ], 500);
         }
 
-        $rides = $rides->items()->map(function ($ride) {
-            return new RideNowRideResource($ride); // Pass currentUserId to the resource
+        $rides->getCollection()->transform(function ($ride) {
+            return new RideNowRideResource($ride);
         });
 
 
