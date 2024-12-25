@@ -63,11 +63,11 @@ class RideController extends Controller
                 "message" => "An error occurred while retrieving available rides.",
             ], 500);
         }
+        $rides = $rides->items();
 
-        $rides->getCollection()->transform(function ($ride) {
-            return new RideNowRideResource($ride);
+        $rides = collect($rides)->map(function ($ride) {
+            return new RideNowRideResource($ride); // Pass currentUserId to the resource
         });
-
 
         return response()->json([
             'success' => true,
