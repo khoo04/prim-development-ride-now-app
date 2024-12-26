@@ -47,6 +47,8 @@ class RideController extends Controller
 
     public function listAllAvailableRides(Request $request)
     {
+        $user = Auth::user();
+
         $perPage = $request->query('per_page', 10); // default to 10 rides per page if not specified
         $page = $request->query('page', 1); // default to page 1 if not specified
 
@@ -65,8 +67,8 @@ class RideController extends Controller
         }
         $rides = $rides->items();
 
-        $rides = collect($rides)->map(function ($ride) {
-            return new RideNowRideResource($ride); // Pass currentUserId to the resource
+        $rides = collect($rides)->map(function ($ride) use ($user)  {
+            return new RideNowRideResource($ride, $user->id);
         });
 
         return response()->json([
@@ -153,8 +155,10 @@ class RideController extends Controller
             ], 500);
         }
 
-        $rides = $rides->map(function ($ride) {
-            return new RideNowRideResource($ride); // Pass currentUserId to the resource
+        $user = Auth::user();
+
+        $rides = $rides->map(function ($ride) use ($user)  {
+            return new RideNowRideResource($ride, $user->id);
         });
 
 
@@ -676,13 +680,13 @@ class RideController extends Controller
         }
 
         
-        if ($ride->status != 'confirmed'){
-            return response()->json([
-                "data" => NULL,
-                "success" => false,
-                "message" => "Ride is already started / completed / canceled",
-            ], 403);
-        }
+        // if ($ride->status != 'confirmed'){
+        //     return response()->json([
+        //         "data" => NULL,
+        //         "success" => false,
+        //         "message" => "Ride is already started / completed / canceled",
+        //     ], 403);
+        // }
 
         try {
             $ride->status = 'started';
