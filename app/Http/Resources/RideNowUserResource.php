@@ -21,7 +21,9 @@ class RideNowUserResource extends JsonResource
             'created_at' => $this->created_at->toDateTimeString(),
             'updated_at' => $this->updated_at->toDateTimeString(),
             'email' => $this->email,
-            'profile_picture' => $this->userDetails->profile_picture,
+            'profile_picture' => $this->userDetails->profile_picture
+                ? asset($this->userDetails->profile_picture)
+                : null,
             'ratings' => $this->userDetails->ratings,
         ];
     }

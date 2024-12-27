@@ -6,6 +6,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class RideNow_UserDetails extends Model
 {
+    protected $casts = [
+        'profile_picture' => 'string',
+        'ratings' => 'double',
+    ];
+
     
     protected $fillable = [
         'user_id',

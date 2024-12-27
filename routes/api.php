@@ -146,10 +146,10 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         Route::post('login', 'RideNowAPI\AuthController@login');
         Route::post('register', 'RideNowAPI\RegisterController@registerViaApi');
     });
-    Route::group(['prefix' => 'public'], function(){
-        Route::get('index','RideNowAPI\PublicController@index');
-        Route::get('menu','RideNowAPI\PublicController@getMenu');
-    });
+    // Route::group(['prefix' => 'public'], function(){
+    //     Route::get('index','RideNowAPI\PublicController@index');
+    //     Route::get('menu','RideNowAPI\PublicController@getMenu');
+    // });
 
     Route::group(['prefix' => 'vehicle'], function(){
         Route::get('types','RideNowAPI\VehicleController@listVehicleType');
@@ -190,6 +190,7 @@ Route::group(['prefix' => 'RideNowV1'], function(){
         });
         Route::group(['prefix' => 'users'], function(){ 
             Route::get('vouchers','RideNowAPI\ProfileController@listUserVouchers');
+            Route::post('update','RideNowAPI\ProfileController@updateUserProfile');
         });
         //Admin Route
         Route::group(['prefix'=>'admin'],function(){
@@ -200,13 +201,9 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::delete('dishes','RideNowAPI\AdminController@deleteDishes');
         });  
     });
-
     Route::group(['prefix' => 'payment'], function (){
         Route::post('callback','RideNowAPI\PaymentController@paymentCallBack')->name('ride_now.payment_callback');
         Route::get('testcallback','RideNowAPI\PaymentController@showTestCallBack')->name('ride_now.payment_testcallback');
         Route::get('{transaction_token}','RideNowAPI\PaymentController@initPayment')->name('ride_now.payment');
-    });
-    Route::group(['prefix' => 'pusher'], function(){
-        
     });
 });

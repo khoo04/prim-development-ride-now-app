@@ -9,6 +9,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Validator;
 use App\Http\Resources\RideNowUserResource;
 
 class AuthController extends Controller
@@ -60,7 +63,7 @@ class AuthController extends Controller
 
             $token  = $user->createToken('auth_token')->plainTextToken;
 
-             // Ensure user details exist
+            // Ensure user details exist
             $this->ensureUserDetailsExist($user->id);
 
             return response()->json([
@@ -101,7 +104,7 @@ class AuthController extends Controller
     public function getUserData(Request $request)
     {
         $user = Auth::user();
-        
+
         $this->ensureUserDetailsExist($user->id);
 
         if ($user != null) {
