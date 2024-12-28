@@ -17,7 +17,7 @@ class CreateRideNowPaymentAllocationsTable extends Migration
             $table->id('payment_allocation_id');
             $table->string('description');
             $table->enum('status', ['pending', 'completed'])->default('pending');
-            $table->decimal('amount', 8, 2);
+            $table->decimal('total_amount', 8, 2);
             $table->unsignedBigInteger('ride_id');
             $table->unsignedBigInteger('user_id');
 
