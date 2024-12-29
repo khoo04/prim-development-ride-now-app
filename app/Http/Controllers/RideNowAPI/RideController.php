@@ -156,7 +156,7 @@ class RideController extends Controller
 
             // Execute the query
             $rides = $rides->get()->filter(function ($ride) use ($seats) {
-                return $ride->available_seats > $seats; // Use the accessor for available seats
+                return $ride->available_seats >= $seats; // Use the accessor for available seats
             });
             
         } catch (Exception $e) {
