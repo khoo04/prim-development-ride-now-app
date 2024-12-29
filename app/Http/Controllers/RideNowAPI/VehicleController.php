@@ -110,10 +110,11 @@ class VehicleController extends Controller
         $validator = Validator::make(
             $request->all(),
             [
-                'car_registration_number' => [
+                'vehicle_registration_number' => [
                     'sometimes',
                     'string',
-                    'regex:/^[A-Za-z]{1,3}\d{1,4}[A-Za-z]{0,1}$/'
+                    'regex:/^[A-Za-z]{1,3}\d{1,4}[A-Za-z]{0,1}$/',
+                    'unique:ride_now__vehicles,vehicle_registration_number'
                 ],
                 'manufacturer' => 'sometimes|string',
                 'model' => 'sometimes|string',
@@ -134,7 +135,7 @@ class VehicleController extends Controller
 
         try {
             $vehicle->update($request->only([
-                'car_registration_number',
+                'vehicle_registration_number',
                 'manufacturer',
                 'model',
                 'seats',
