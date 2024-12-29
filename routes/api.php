@@ -204,6 +204,7 @@ Route::group(['prefix' => 'RideNowV1'], function(){
     Route::group(['prefix' => 'payment'], function (){
         Route::post('callback','RideNowAPI\PaymentController@paymentCallBack')->name('ride_now.payment_callback');
         Route::get('testcallback','RideNowAPI\PaymentController@showTestCallBack')->name('ride_now.payment_testcallback');
+        Route::post('demo/{transaction_token}','RideNowAPI\PaymentController@demoPayment');
         Route::get('{transaction_token}','RideNowAPI\PaymentController@initPayment')->name('ride_now.payment');
     });
 });

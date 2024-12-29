@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\RideNowAPI;
 
-use App\Events\PaymentStatusChanged;
 use Exception;
 use App\RideNow_Payments;
 use App\RideNow_UserDetails;
@@ -10,8 +9,10 @@ use Illuminate\Http\Request;
 use App\RideNow_PaymentAllocation;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Events\PaymentStatusChanged;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Crypt;
 use App\Http\Resources\RideNowRideResource;
 use App\Http\Resources\RideNowUserResource;
@@ -71,6 +72,150 @@ class PaymentController extends Controller
         $paymentId = $request->Fpx_SellerOrderNo;
         $transactionAmount = $request->TransactionAmount;
 
+        $this->processPaymentCallback($status, $paymentId, $transactionAmount);
+        // try {
+        //     $payment = RideNow_Payments::findOrFail($paymentId);
+        // } catch (Exception $e) {
+        //     return response()->json([
+        //         "data" => null,
+        //         "success" => false,
+        //         "message" => "Payment not found",
+        //     ],  404);
+        // }
+
+        // if ($status == "Success") {
+
+        //     if ($payment->amount != $transactionAmount) {
+        //         return response()->json([
+        //             "data" => null,
+        //             "success" => false,
+        //             "message" => "Invalid payment amount",
+        //         ],  400);
+        //     }
+
+        //     try {
+        //         if ($payment->voucher != null) {
+        //             $voucher = $payment->voucher;
+        //             $voucher->redeemed = true;
+        //             $voucher->save();
+        //         }
+
+        //         $payment->status = 'completed';
+        //         $payment->save();
+
+        //         $ride = $payment->ride;
+
+        //         // Check if user cannot join their own created ride to avoid duplicates
+        //         if ($ride->driver->id == $payment->user->id) {
+        //             $paymentAllocation = RideNow_PaymentAllocation::create([
+        //                 'status' => 'pending',
+        //                 'description' => 'Refund to users due to user trying to join their own created ride',
+        //                 'total_amount' => $payment->amount,
+        //                 'ride_id' => $ride->ride_id,
+        //                 'user_id' => $payment->user->id,
+        //             ]);
+
+        //             $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
+        //             $payment->save();
+
+        //             return response()->json([
+        //                 "data" => NULL,
+        //                 "success" => false,
+        //                 "message" => "User cannot join their own ride. Contact admin for refund",
+        //             ], 409); // 409 Conflict
+        //         }
+
+        //         // Check if user is already joined to avoid duplicates
+        //         if ($ride->passengers()->where('user_id', $payment->user->id)->exists()) {
+        //             $paymentAllocation = RideNow_PaymentAllocation::create([
+        //                 'status' => 'pending',
+        //                 'description' => 'Refund to user due to user was trying to join their joined ride',
+        //                 'total_amount' => $payment->amount,
+        //                 'ride_id' => $ride->ride_id,
+        //                 'user_id' => $payment->user->id,
+        //             ]);
+
+        //             $payment->payment_allocation_id =  $paymentAllocation->payment_allocation_id;
+        //             $payment->save();
+
+
+        //             return response()->json([
+        //                 "data" => "refund",
+        //                 "success" => false,
+        //                 "message" => "User is already joined in this ride. Contact admin for refund",
+        //             ], 409); // 409 Conflict
+        //         }
+
+        //         //Retrieve vehicle seat count
+        //         $vehicleSeats = $ride->vehicle->seats;
+
+        //         $currentPassengersCount = $ride->passengers()->count();
+
+        //         $requiredSeats = $payment->required_seats;
+
+        //         $currentAvailableSeats = $vehicleSeats - $currentPassengersCount;
+        //         if ($requiredSeats > $currentAvailableSeats) {
+
+        //             $paymentAllocation = RideNow_PaymentAllocation::create([
+        //                 'status' => 'pending',
+        //                 'description' => 'Ride completed income',
+        //                 'total_amount' => $payment->amount,
+        //                 'ride_id' => $ride->ride_id,
+        //                 'user_id' => $payment->user->id,
+        //             ]);
+
+        //             $payment->payment_allocation_id =  $paymentAllocation->payment_allocation_id;
+        //             $payment->save();
+
+        //             return response()->json([
+        //                 "data" => $payment,
+        //                 "success" => false,
+        //                 "message" => "The required seats is exceed the current vehicle available seats",
+        //             ], 403); // 403 Forbidden
+        //         }
+
+
+        //         // Loop through the required seats and attach the user for each seat
+        //         for ($i = 0; $i < $requiredSeats; $i++) {
+        //             $ride->passengers()->attach($payment->user->id);
+        //         }
+
+        //         $ride->refresh();
+
+        //         // Reload ride with relationships
+        //         $ride->load(['driver', 'passengers', 'vehicle']);
+
+        //         event(new PaymentStatusChanged($ride, $payment, $payment->user, true, "Payment successfully"));
+
+        //         return response()->json([
+        //             'success' => true,
+        //             'message' => 'User joined the ride successfully',
+        //             'data' => new RideNowRideResource($ride),
+        //         ], 200);
+        //     } catch (Exception $e) {
+        //         return response()->json([
+        //             "data" => $e,
+        //             "success" => false,
+        //             "message" => "Exception occurred while joining the ride",
+        //         ], 500);
+        //     }
+        // } else {
+        //     $payment->status = 'failed';
+        //     $payment->save();
+
+        //     event(new PaymentStatusChanged(null, $payment, $payment->user, false, "Payment failed"));
+
+        //     return response()->json([
+        //         "data" => null,
+        //         "success" => false,
+        //         "message" => "Payment failed",
+        //     ], 200);
+        // }
+    }
+
+
+    private function processPaymentCallback($status, $paymentId, $transactionAmount)
+    {
         try {
             $payment = RideNow_Payments::findOrFail($paymentId);
         } catch (Exception $e) {
@@ -209,5 +354,29 @@ class PaymentController extends Controller
                 "message" => "Payment failed",
             ], 200);
         }
+    }
+
+
+    /**
+     * This function only for demo purposes
+     */
+    public function demoPayment($transaction_token)
+    {
+        $fpx_sellerExOrderNo = Crypt::decryptString($transaction_token);
+
+        //Retrieve payment data
+        $payment = RideNow_Payments::findOrFail($fpx_sellerExOrderNo);
+
+        $amount = $payment->amount;
+
+        // return response()->json(route('ride_now.payment_callback'));
+
+        $this->processPaymentCallback("Success", $fpx_sellerExOrderNo, $amount);
+
+        return response()->json([
+            "data" => null,
+            "success" => true,
+            "message" => "Demo payment success",
+        ], 200);
     }
 }
