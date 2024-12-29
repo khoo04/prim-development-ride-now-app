@@ -14,10 +14,10 @@ class RideNow_Vehicles extends Model
     protected $primaryKey = 'vehicle_id';
 
     protected $fillable = [
-        'vehicle_registration_number', 
-        'manufacturer', 
-        'model', 
-        'seats', 
+        'vehicle_registration_number',
+        'manufacturer',
+        'model',
+        'seats',
         'average_fuel_consumptions',
         'vehicle_type_id',
         'user_id',
@@ -25,16 +25,34 @@ class RideNow_Vehicles extends Model
 
 
     //User that obtain this vehicles
-    public function user(){
-        return $this->belongsTo(User::class,'user_id');
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function vehicleType(){
-        return $this->belongsTo(RideNow_Vehicle_Types::class,'vehicle_type_id');
+    public function vehicleType()
+    {
+        return $this->belongsTo(RideNow_Vehicle_Types::class, 'vehicle_type_id');
     }
 
     public function rides()
-{
-    return $this->hasMany(RideNow_Rides::class, 'vehicle_id');
-}
+    {
+        return $this->hasMany(RideNow_Rides::class, 'vehicle_id');
+    }
+
+    /**
+     * Check if this vehicle has active rides with the specified criteria.
+     * 
+     * @return bool
+     */
+    public function hasActiveRides()
+    {
+        return $this->rides()
+            ->where(function ($query) {
+                $query->where('status', 'confirmed')
+                    ->whereHas('passengers') // Ensure passengers are not empty
+                    ->orWhere('status', 'started');
+            })
+            ->exists();
+    }
 }

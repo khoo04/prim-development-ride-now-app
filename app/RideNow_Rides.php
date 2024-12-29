@@ -26,26 +26,38 @@ class RideNow_Rides extends Model
 
 
 
-    public function driver(){
-        return $this->belongsTo(User::class,'user_id');
+    public function driver()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
-    public function passengers(){
+    public function passengers()
+    {
         return $this
-        ->belongsToMany(User::class,'ride_now__rides_users','ride_id','user_id')
-        ->withTimestamps();
+            ->belongsToMany(User::class, 'ride_now__rides_users', 'ride_id', 'user_id')
+            ->withTimestamps();
     }
 
-    public function ratings(){
-        return $this->belongsToMany(User::class,'ride_now__rides_rating','ride_id','user_id')
-        ->withPivot('rating');
+    public function ratings()
+    {
+        return $this->belongsToMany(User::class, 'ride_now__rides_rating', 'ride_id', 'user_id')
+            ->withPivot('rating');
     }
 
-    public function vehicle(){
+    public function vehicle()
+    {
         return $this->belongsTo(RideNow_Vehicles::class, 'vehicle_id');
     }
 
-    public function payments(){
-        return $this->hasMany(RideNow_Payments::class,'ride_id');
+    public function payments()
+    {
+        return $this->hasMany(RideNow_Payments::class, 'ride_id');
+    }
+
+    // Accessor to calculate available seats
+    public function getAvailableSeatsAttribute()
+    {
+        $passengerCount = $this->passengers()->count();
+        return $this->vehicle->seats - $passengerCount;
     }
 }

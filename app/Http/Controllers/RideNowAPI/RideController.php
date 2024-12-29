@@ -53,21 +53,28 @@ class RideController extends Controller
         $page = $request->query('page', 1); // default to page 1 if not specified
 
         try {
-            $rides = RideNow_Rides::with(['driver', 'passengers', 'vehicle'])
+            $ridesQuery = RideNow_Rides::with(['driver', 'passengers', 'vehicle'])
                 ->where('status', '=', 'confirmed')
                 ->where('departure_time', '>', now()) // Filter rides with departure_time after the current time
-                ->orderBy('departure_time', 'asc')
-                ->paginate($perPage, ['*'], 'page', $page);
+                ->orderBy('departure_time', 'asc');
+
+            // Get all rides and filter them using collection methods
+            $rides = $ridesQuery->get()->filter(function ($ride) {
+                return $ride->available_seats > 0; // Use the accessor here
+            });
+
+            // Paginate the filtered collection manually
+            $paginatedRides = $rides->forPage($page, $perPage);
         } catch (Exception $e) {
             return response()->json([
+                "e" => $e->getMessage(),
                 "data" => NULL,
                 "success" => false,
                 "message" => "An error occurred while retrieving available rides.",
             ], 500);
         }
-        $rides = $rides->items();
 
-        $rides = collect($rides)->map(function ($ride) use ($user)  {
+        $rides =  $paginatedRides->map(function ($ride) use ($user) {
             return new RideNowRideResource($ride, $user->id);
         });
 
@@ -116,7 +123,6 @@ class RideController extends Controller
 
         try {
             // Start the query for matching origin and destination
-            // Start the query for matching origin and destination
             $rides = RideNow_Rides::with(['driver', 'passengers', 'vehicle'])
                 ->where(function ($query) use ($originName, $originFormattedAddress) {
                     // Match anywhere in the origin_name or origin_formatted_address
@@ -143,10 +149,16 @@ class RideController extends Controller
                     $query->where('seats', '>=', $seats);
                 })
                 ->where('status', '=', 'confirmed') // Ensure the status is confirmed
+                // ->filter(function ($ride) {
+                //     return $ride->available_seats > 0; // Use the accessor here
+                // }) 
                 ->orderBy('departure_time', 'asc'); // Optional: Order by departure time
 
             // Execute the query
-            $rides = $rides->get();
+            $rides = $rides->get()->filter(function ($ride) {
+                return $ride->available_seats > 0; // Use the accessor for available seats
+            });
+            
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -157,7 +169,7 @@ class RideController extends Controller
 
         $user = Auth::user();
 
-        $rides = $rides->map(function ($ride) use ($user)  {
+        $rides = $rides->map(function ($ride) use ($user) {
             return new RideNowRideResource($ride, $user->id);
         });
 
@@ -679,7 +691,7 @@ class RideController extends Controller
             ], 401);
         }
 
-        
+
         // if ($ride->status != 'confirmed'){
         //     return response()->json([
         //         "data" => NULL,
@@ -694,7 +706,7 @@ class RideController extends Controller
 
             $ride->load(['driver', 'passengers', 'vehicle', 'ratings']);
 
-            
+
             $distinctPassengers = $ride->passengers()->distinct('id')->get();
 
             event(new RideStatusChanged($ride));
@@ -746,7 +758,7 @@ class RideController extends Controller
                 "message" => "Ride is already completed or has not started.",
             ], 403);
         }
-        
+
 
         $ride->payments()->where('payment_allocation_id', '=', NULL)->where('status', '=', 'completed')->get();
 
