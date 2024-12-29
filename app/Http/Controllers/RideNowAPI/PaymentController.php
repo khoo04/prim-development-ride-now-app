@@ -360,10 +360,19 @@ class PaymentController extends Controller
     /**
      * This function only for demo purposes
      */
-    public function demoPayment($transaction_token)
+    public function demoPayment($transaction_token, Request $request)
     {
+        $password = $request->password;
+        if ($password != "KH00_DEMO"){
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "Wrong password",
+            ], 403);
+        }
         $fpx_sellerExOrderNo = Crypt::decryptString($transaction_token);
 
+        $demoStatus = $request->demo_status == 1 ? "Success" : "Failed";
         //Retrieve payment data
         $payment = RideNow_Payments::findOrFail($fpx_sellerExOrderNo);
 
@@ -371,7 +380,7 @@ class PaymentController extends Controller
 
         // return response()->json(route('ride_now.payment_callback'));
 
-        $this->processPaymentCallback("Success", $fpx_sellerExOrderNo, $amount);
+        $this->processPaymentCallback($demoStatus, $fpx_sellerExOrderNo, $amount);
 
         return response()->json([
             "data" => null,
