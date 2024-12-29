@@ -155,8 +155,8 @@ class RideController extends Controller
                 ->orderBy('departure_time', 'asc'); // Optional: Order by departure time
 
             // Execute the query
-            $rides = $rides->get()->filter(function ($ride) {
-                return $ride->available_seats > 0; // Use the accessor for available seats
+            $rides = $rides->get()->filter(function ($ride) use ($seats) {
+                return $ride->available_seats > $seats; // Use the accessor for available seats
             });
             
         } catch (Exception $e) {
