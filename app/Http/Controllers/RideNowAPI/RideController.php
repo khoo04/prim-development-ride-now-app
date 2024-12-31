@@ -647,7 +647,37 @@ class RideController extends Controller
             ], 401);
         }
 
+        if ($ride->status != 'confirmed') {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride is not in confirmed status",
+            ], 403);
+        }
+
+
         try {
+            //Retrieve payments record associate with this ride
+            $payments = $ride->payments()
+            ->where('payment_allocation_id', '=', NULL)
+            ->where('status', '=', 'completed')
+            ->get();
+
+            //Refund the payment to user
+            foreach ($payments as $payment){
+                $paymentAllocation = RideNow_PaymentAllocation::create([
+                    'status' => 'pending',
+                    'description' => 'Refund due to driver cancel ride',
+                    'total_amount' =>  $payment->amount,
+                    'ride_id' => $payment->ride_id,
+                    'user_id' => $payment->user_id,
+                ]);
+
+                $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
+                $payment->save();
+            }
+
+
             $ride->status = 'canceled';
             $ride->save();
 
@@ -758,9 +788,6 @@ class RideController extends Controller
                 "message" => "Ride is already completed or has not started.",
             ], 403);
         }
-
-
-        $ride->payments()->where('payment_allocation_id', '=', NULL)->where('status', '=', 'completed')->get();
 
 
         try {
