@@ -189,6 +189,14 @@ class VehicleController extends Controller
             ], 401);
         }
 
+        if ($vehicle->hasActiveRides()) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "This vehicle has active rides and cannot be deleted. Vehicle delete are allowed only after the ride is completed.",
+            ], 403);
+        }
+
         try {
             $vehicle->delete();
 
