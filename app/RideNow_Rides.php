@@ -46,7 +46,7 @@ class RideNow_Rides extends Model
 
     public function vehicle()
     {
-        return $this->belongsTo(RideNow_Vehicles::class, 'vehicle_id');
+        return $this->belongsTo(RideNow_Vehicles::class, 'vehicle_id')->withTrashed();;
     }
 
     public function payments()
