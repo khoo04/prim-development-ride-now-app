@@ -223,6 +223,14 @@ class RideController extends Controller
             ], 404);
         }
 
+        if (Carbon::now()->greaterThan($ride->departure_time)) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "The ride is expired",
+            ], 403); // 403 Forbidden
+        }
+
         // Check if user cannot join their own created ride to avoid duplicates
         if ($ride->driver->id == $user->id) {
             return response()->json([
@@ -481,8 +489,7 @@ class RideController extends Controller
 
             foreach ($rides as $ride) {
                 if ($ride->departure_time < now() && $ride->status === 'confirmed') {
-                    $ride->status = 'canceled';
-                    $ride->save(); // Save the updated status to the database
+                    $this->cancelRide($ride->ride_id);
                 }
             }
         } catch (Exception $e) {
