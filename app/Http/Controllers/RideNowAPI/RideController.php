@@ -488,7 +488,11 @@ class RideController extends Controller
             $rides = $user->createdRides()->with(['driver', 'passengers', 'vehicle'])->get();
 
             foreach ($rides as $ride) {
-                if ($ride->departure_time < now() && $ride->status === 'confirmed') {
+                //If the ride is not started after 30 minutes the departure time, cancel it automatically
+                if (
+                    Carbon::parse($ride->departure_time)->lessThan(Carbon::now()->addMinutes(30)) &&
+                    $ride->status === 'confirmed'
+                ) {
                     $this->cancelRide($ride->ride_id);
                 }
             }
