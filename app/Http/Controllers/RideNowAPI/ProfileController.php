@@ -218,7 +218,7 @@ class ProfileController extends Controller
                     'total_credited_balance' => round($credited, 2),
                     'total_earnings_balance' => round($totalEarningsBalance, 2),
                     'current_month_total_earnings' => [
-                        'year_month' => now()->format('Y-m'), //Current Year Month
+                        'year_month' => now()->format('Y-m-d'), //Current Year Month
                         'earnings' => $currentMonthTotalEarnings,
                     ],
                     'total_earnings_graph_data' => $earningsGraphData,
