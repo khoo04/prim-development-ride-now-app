@@ -154,10 +154,10 @@ Route::group(['prefix' => 'RideNowV1'], function(){
     Route::group(['prefix' => 'vehicle'], function(){
         Route::get('types','RideNowAPI\VehicleController@listVehicleType');
     });
-    Route::group(['prefix' => 'test'], function(){
-       Route::get('getRoles','RideNowAPI\TestController@getRoles');
-       Route::post('message','RideNowAPI\TestController@testMessage');
-    });
+    // Route::group(['prefix' => 'test'], function(){
+    //    Route::get('getRoles','RideNowAPI\TestController@getRoles');
+    //    Route::post('message','RideNowAPI\TestController@testMessage');
+    // });
 
     //Authenticated Route
     Route::group(['middleware' => 'auth:sanctum'], function(){
@@ -189,17 +189,18 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::delete('{vehicle_id}','RideNowAPI\VehicleController@deleteVehicle');
         });
         Route::group(['prefix' => 'users'], function(){ 
+            Route::get('balance','RideNowAPI\ProfileController@retrieveUserBalance');
             Route::get('vouchers','RideNowAPI\ProfileController@listUserVouchers');
             Route::post('update','RideNowAPI\ProfileController@updateUserProfile');
         });
-        //Admin Route
-        Route::group(['prefix'=>'admin'],function(){
-            Route::get('shops','RideNowAPI\AdminController@getShop');
-            Route::get('dish_types','RideNowAPI\AdminController@getDishTypeList');
-            Route::post('dishes','RideNowAPI\AdminController@addDishes');
-            Route::put('dishes','RideNowAPI\AdminController@updateDishes');
-            Route::delete('dishes','RideNowAPI\AdminController@deleteDishes');
-        });  
+        // //Admin Route
+        // Route::group(['prefix'=>'admin'],function(){
+        //     Route::get('shops','RideNowAPI\AdminController@getShop');
+        //     Route::get('dish_types','RideNowAPI\AdminController@getDishTypeList');
+        //     Route::post('dishes','RideNowAPI\AdminController@addDishes');
+        //     Route::put('dishes','RideNowAPI\AdminController@updateDishes');
+        //     Route::delete('dishes','RideNowAPI\AdminController@deleteDishes');
+        // });  
     });
     Route::group(['prefix' => 'payment'], function (){
         Route::post('callback','RideNowAPI\PaymentController@paymentCallBack')->name('ride_now.payment_callback');
