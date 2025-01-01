@@ -142,6 +142,9 @@ class ProfileController extends Controller
             $creditedEarnings = 0;
             $uncreditedEarnings = 0;
 
+            //Total Refunds Balances (Credited + Uncredited)
+            $totalRefundBalances = 0;
+
             // Initialize earnings by month (1-12) with default values
             $earningsByMonthPerYear = array_fill(1, 12, ['credited' => 0, 'uncredited' => 0]);
             $currentYear = (int) date('Y'); // Get the current year dynamically
@@ -187,6 +190,7 @@ class ProfileController extends Controller
                     } else {
                         $uncredited += $record['amount'];
                     }
+                    $totalRefundBalances += $record['amount'];
                 }
             }
 
@@ -205,6 +209,7 @@ class ProfileController extends Controller
 
             $totalBalance = $credited + $uncredited;
             $totalEarningsBalance = $creditedEarnings + $uncreditedEarnings;
+       
 
             $currentMonthTotalEarnings = round($earningsByMonthPerYear[$currentMonth]['credited'], 2) + round($earningsByMonthPerYear[$currentMonth]['uncredited'], 2);
 
@@ -223,6 +228,7 @@ class ProfileController extends Controller
                     ],
                     'total_earnings_graph_data' => $earningsGraphData,
                     'earnings_records' => $earnings,
+                    'total_refund_balance' => round($totalRefundBalances,2),
                     'refunds_records' => $refunds,
                 ],
             ], 200);
