@@ -129,97 +129,109 @@ class ProfileController extends Controller
     {
         $user = Auth::user();
 
-        $allocations = DB::table('ride_now__payment_allocations')
-            ->where('user_id', $user->id)
-            ->get();
+        try {
+            $allocations = DB::table('ride_now__payment_allocations')
+                ->where('user_id', $user->id)
+                ->get();
 
-        $earnings = [];
-        $refunds = [];
-        $credited = 0; //Credited Earnings + Credited Refunds
-        $uncredited = 0; //Uncredited Earnings + Uncredited Refunds
+            $earnings = [];
+            $refunds = [];
+            $credited = 0; //Credited Earnings + Credited Refunds
+            $uncredited = 0; //Uncredited Earnings + Uncredited Refunds
 
-        $creditedEarnings = 0;
-        $uncreditedEarnings = 0;
+            $creditedEarnings = 0;
+            $uncreditedEarnings = 0;
 
-        // Initialize earnings by month (1-12) with default values
-        $earningsByMonthPerYear = array_fill(1, 12, ['credited' => 0, 'uncredited' => 0]);
-        $currentYear = (int) date('Y'); // Get the current year dynamically
-        $currentMonth = (int) date('n');
+            // Initialize earnings by month (1-12) with default values
+            $earningsByMonthPerYear = array_fill(1, 12, ['credited' => 0, 'uncredited' => 0]);
+            $currentYear = (int) date('Y'); // Get the current year dynamically
+            $currentMonth = (int) date('n');
 
-        foreach ($allocations as $allocation) {
-            $status = strtolower($allocation->status) === 'completed' ? 'credited' : 'uncredited';
-            $record = [
-                'created_date_time' => $allocation->created_at,
-                'status' => $status,
-                'amount' => (float) $allocation->total_amount,
-            ];
+            foreach ($allocations as $allocation) {
+                $status = strtolower($allocation->status) === 'completed' ? 'credited' : 'uncredited';
+                $record = [
+                    'created_date_time' => $allocation->created_at,
+                    'status' => $status,
+                    'amount' => (float) $allocation->total_amount,
+                ];
 
-            $allocationMonth = (int) date('n', strtotime($allocation->created_at));
-            $allocationYear = (int) date('Y', strtotime($allocation->created_at));
+                $allocationMonth = (int) date('n', strtotime($allocation->created_at));
+                $allocationYear = (int) date('Y', strtotime($allocation->created_at));
 
 
-            // Process earnings or refunds based on description
-            if (strpos(strtolower($allocation->description), 'income') !== false) {
-                $earnings[] = $record;
+                // Process earnings or refunds based on description
+                if (strpos(strtolower($allocation->description), 'income') !== false) {
+                    $earnings[] = $record;
 
-                if ($record['status'] === 'credited') {
-                    $credited += $record['amount'];
-                    $creditedEarnings += round($record['amount'], 2);
-                    // Process only allocations for the current year
-                    if ($allocationYear === $currentYear) {
-                        $earningsByMonthPerYear[$allocationMonth]['credited'] += round($record['amount'], 2);
+                    if ($record['status'] === 'credited') {
+                        $credited += $record['amount'];
+                        $creditedEarnings += round($record['amount'], 2);
+                        // Process only allocations for the current year
+                        if ($allocationYear === $currentYear) {
+                            $earningsByMonthPerYear[$allocationMonth]['credited'] += round($record['amount'], 2);
+                        }
+                    } else {
+                        $uncredited += $record['amount'];
+                        $uncreditedEarnings += $record['amount'];
+
+                        // Process only allocations for the current year
+                        if ($allocationYear === $currentYear) {
+                            $earningsByMonthPerYear[$allocationMonth]['uncredited'] += $record['amount'];
+                        }
                     }
-                } else {
-                    $uncredited += $record['amount'];
-                    $uncreditedEarnings += $record['amount'];        
+                } elseif (strpos(strtolower($allocation->description), 'refund') !== false) {
+                    $refunds[] = $record;
 
-                    // Process only allocations for the current year
-                    if ($allocationYear === $currentYear) {
-                        $earningsByMonthPerYear[$allocationMonth]['uncredited'] += $record['amount'];
+                    if ($record['status'] === 'credited') {
+                        $credited += $record['amount'];
+                    } else {
+                        $uncredited += $record['amount'];
                     }
-                }
-            } elseif (strpos(strtolower($allocation->description), 'refund') !== false) {
-                $refunds[] = $record;
-
-                if ($record['status'] === 'credited') {
-                    $credited += $record['amount'];
-                } else {
-                    $uncredited += $record['amount'];
                 }
             }
-        }
 
 
-        // Prepare graph data
-        $earningsGraphData = [];
-        foreach ($earningsByMonthPerYear as $month => $data) {
-            $earningsGraphData[] = [
-                'months' => $month,
-                'graph_data' => [
-                    'credited' => round($data['credited'], 2),  // Round credited value to 2 decimal places
-                    'uncredited' => round($data['uncredited'], 2),  // Round uncredited value to 2 decimal places
+            // Prepare graph data
+            $earningsGraphData = [];
+            foreach ($earningsByMonthPerYear as $month => $data) {
+                $earningsGraphData[] = [
+                    'months' => $month,
+                    'graph_data' => [
+                        'credited' => round($data['credited'], 2),  // Round credited value to 2 decimal places
+                        'uncredited' => round($data['uncredited'], 2),  // Round uncredited value to 2 decimal places
+                    ],
+                ];
+            }
+
+            $totalBalance = $credited + $uncredited;
+            $totalEarningsBalance = $creditedEarnings + $uncreditedEarnings;
+
+            $currentMonthTotalEarnings = round($earningsByMonthPerYear[$currentMonth]['credited'], 2) + round($earningsByMonthPerYear[$currentMonth]['uncredited'], 2);
+
+
+            return response()->json([
+                "success" => true,
+                "message" => "User balance retrieved successfully",
+                "data" => [
+                    'total_balance' => round($totalBalance, 2),
+                    'total_uncredited_balance' => round($uncredited, 2),
+                    'total_credited_balance' => round($credited, 2),
+                    'total_earnings_balance' => round($totalEarningsBalance, 2),
+                    'current_month_total_earnings' => [
+                        'year_month' => now()->format('Y-m'), //Current Year Month
+                        'earnings' => $currentMonthTotalEarnings,
+                    ],
+                    'total_earnings_graph_data' => $earningsGraphData,
+                    'earnings_records' => $earnings,
+                    'refunds_records' => $refunds,
                 ],
-            ];
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => true,
+                "message" => "User balance retrieved successfully",
+                "data" => $e->getMessage(),
+            ], 500);
         }
-
-        $totalBalance = $credited + $uncredited;
-        $totalEarningsBalance = $creditedEarnings + $uncreditedEarnings;
-
-        $currentMonthTotalEarnings = round($earningsByMonthPerYear[$currentMonth]['credited'], 2) + round($earningsByMonthPerYear[$currentMonth]['uncredited'], 2);
-
-
-        return response()->json([
-            'total_balance' => round($totalBalance, 2),
-            'total_uncredited_balance' => round($uncredited, 2),
-            'total_credited_balance' => round($credited, 2),
-            'total_earnings_balance' => round($totalEarningsBalance, 2),
-            'current_month_total_earnings' => [
-                'year_month' => now()->format('Y-m'), //Current Year Month
-                'earnings' => $currentMonthTotalEarnings,
-            ],
-            'total_earnings_graph_data' => $earningsGraphData,
-            'earnings_records' => $earnings,
-            'refunds_records' => $refunds,
-        ], 200);
     }
 }
