@@ -178,6 +178,7 @@ Route::group(['prefix' => 'RideNowV1'], function(){
             Route::post('complete/{ride_id}','RideNowAPI\RideController@completeRide');
             Route::post('start/{ride_id}','RideNowAPI\RideController@startRide');
             Route::post('rate/{ride_id}','RideNowAPI\RideController@rateRide');
+            Route::post('leave/{ride_id}','RideNowAPI\RideController@leaveRide');
             Route::put('{ride_id}','RideNowAPI\RideController@updateRide');
             Route::delete('{ride_id}','RideNowAPI\RideController@cancelRide');
         });

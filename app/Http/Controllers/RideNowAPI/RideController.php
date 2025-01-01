@@ -158,7 +158,6 @@ class RideController extends Controller
             $rides = $rides->get()->filter(function ($ride) use ($seats) {
                 return $ride->available_seats >= $seats; // Use the accessor for available seats
             });
-            
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
@@ -392,6 +391,89 @@ class RideController extends Controller
             "success" => true,
             "message" => "Success to get payment links",
         ], 200);
+    }
+
+    public function leaveRide($ride_id)
+    {
+        $user = Auth::user();
+
+        try {
+            $ride = RideNow_Rides::findOrFail($ride_id);
+        } catch (Exception $e) {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride not found",
+            ], 404);
+        }
+
+        if ($ride->status != "confirmed"){
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Cannot leave the ride once the ride is started/completed/canceled",
+            ], 404);
+        }
+
+        // Check if user is passengers or not
+        if (!($ride->passengers()->where('user_id', $user->id)->exists())) {
+            return response()->json([
+                "data" => null,
+                "success" => false,
+                "message" => "User is not the passengers for this ride",
+            ], 409); // 409 Conflict
+        }
+
+        try {
+            //Retrieve payments record associate with this ride
+            $payment = $ride->payments()
+                ->where('payment_allocation_id', '=', NULL)
+                ->where('status', '=', 'completed')
+                ->where('user_id', '=', $user->id)
+                ->first();
+
+            //Refund the payment to user
+            if ($payment) {
+                $paymentAllocation = RideNow_PaymentAllocation::create([
+                    'status' => 'pending',
+                    'description' => 'Refund due to user leaves ride',
+                    'total_amount' =>  $payment->amount,
+                    'ride_id' => $payment->ride_id,
+                    'user_id' => $payment->user_id,
+                ]);
+
+                $payment->payment_allocation_id = $paymentAllocation->payment_allocation_id;
+                $payment->save();
+
+                $ride->passengers()
+                    ->wherePivot('user_id', '=', $payment->user->id)
+                    ->detach();
+
+                $ride->refresh();
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Payment record is not found',
+                    'data' => NULL,
+                ], 500);
+            }
+
+            $ride->save();
+
+            $ride->load(['driver', 'passengers', 'vehicle']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Leave ride successfully',
+                'data' => new RideNowRideResource($ride),
+            ], 200);
+        } catch (Exception $e) {
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Exception occurred in canceling ride",
+            ], 500);
+        }
     }
 
     /**
@@ -670,12 +752,12 @@ class RideController extends Controller
         try {
             //Retrieve payments record associate with this ride
             $payments = $ride->payments()
-            ->where('payment_allocation_id', '=', NULL)
-            ->where('status', '=', 'completed')
-            ->get();
+                ->where('payment_allocation_id', '=', NULL)
+                ->where('status', '=', 'completed')
+                ->get();
 
             //Refund the payment to user
-            foreach ($payments as $payment){
+            foreach ($payments as $payment) {
                 $paymentAllocation = RideNow_PaymentAllocation::create([
                     'status' => 'pending',
                     'description' => 'Refund due to driver cancel ride',
