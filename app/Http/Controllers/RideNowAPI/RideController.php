@@ -462,6 +462,8 @@ class RideController extends Controller
 
             $ride->load(['driver', 'passengers', 'vehicle']);
 
+            event(new RideStatusChanged($ride));
+
             return response()->json([
                 'success' => true,
                 'message' => 'Leave ride successfully',
