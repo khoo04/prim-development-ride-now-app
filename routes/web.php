@@ -955,6 +955,16 @@ Route::group(['prefix' => 'polimas'], function () {
     });
 });
 
+/**
+ * Ride_Row
+ */
+Route::group(['prefix' => 'ride_now'], function () {
+    // Route::get('/', 'PolimasController@indexLogin');
+    Route::get('/privacy-policy',function(){
+        return view('ride_now.privacy_policy');
+    });
+});
+
 /**FIXME: Commented Might Be Not Used Right Now */
 //offer & ride
 // Route::group(['prefix' => 'offernride'], function () {
