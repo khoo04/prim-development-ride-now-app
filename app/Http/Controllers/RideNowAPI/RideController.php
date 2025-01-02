@@ -333,9 +333,9 @@ class RideController extends Controller
         }
 
 
-
+        //TODO: Read it from database dynamically
         // Step 4: Apply platform charge (5%)
-        $platformCharge = $this->roundToNearestFiveCents($subtotal * 0.05);
+        $platformCharge = $this->roundToNearestFiveCents($subtotal * 0.01);
         $amount_should_pay = $subtotal + $platformCharge;
 
         // Step 5: Add bank service charge
@@ -894,8 +894,9 @@ class RideController extends Controller
             // Calculate the cumulative payment amount
             $cumulativePaymentAmount = $payments->reduce(function ($total, $payment) {
                 // Reverse the charges to calculate the original amount
+                //TODO: Payment charge read from database dynamically
                 $amountBeforeBankCharge = ($payment->amount - 0.70); // Remove bank service charge
-                $originalAmount = $amountBeforeBankCharge / 1.05;   // Remove 5% platform service charge
+                $originalAmount = $amountBeforeBankCharge / 1.01;   // Remove 1% platform service charge
 
                 // Add the original amount to the total
                 return $total + $originalAmount;
