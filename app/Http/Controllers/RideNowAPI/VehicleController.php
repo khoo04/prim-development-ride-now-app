@@ -3,11 +3,12 @@
 namespace App\Http\Controllers\RideNowAPI;
 
 use App\User;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\RideNow_Vehicle_Types;
-use App\RideNow_Vehicles;
 use Exception;
+use App\RideNow_Vehicles;
+use Illuminate\Http\Request;
+use App\RideNow_Vehicle_Types;
+use Illuminate\Validation\Rule;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
@@ -48,7 +49,7 @@ class VehicleController extends Controller
                     'required',
                     'string',
                     'regex:/^[A-Za-z]{1,3}\d{1,4}[A-Za-z]{0,1}$/',
-                    'unique:ride_now__vehicles,vehicle_registration_number'
+                    Rule::unique('ride_now__vehicles', 'vehicle_registration_number')->whereNull('deleted_at'),
                 ],
                 'manufacturer' => 'required | string',
                 'model' => 'required | string',
@@ -122,7 +123,7 @@ class VehicleController extends Controller
                     'sometimes',
                     'string',
                     'regex:/^[A-Za-z]{1,3}\d{1,4}[A-Za-z]{0,1}$/',
-                    'unique:ride_now__vehicles,vehicle_registration_number'
+                    Rule::unique('ride_now__vehicles', 'vehicle_registration_number')->whereNull('deleted_at'),
                 ],
                 'manufacturer' => 'sometimes|string',
                 'model' => 'sometimes|string',
@@ -205,7 +206,6 @@ class VehicleController extends Controller
                 'message' => 'Vehicle deleted successfully',
                 'data' => NULL,
             ], 200);
-            
         } catch (Exception $e) {
             return response()->json([
                 "data" => NULL,
