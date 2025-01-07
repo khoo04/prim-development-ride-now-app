@@ -473,7 +473,7 @@ class RideController extends Controller
             return response()->json([
                 "data" => NULL,
                 "success" => false,
-                "message" => "Exception occurred in canceling ride",
+                "message" => "Exception occurred in leaving ride",
             ], 500);
         }
     }
@@ -816,14 +816,13 @@ class RideController extends Controller
             ], 401);
         }
 
-
-        // if ($ride->status != 'confirmed'){
-        //     return response()->json([
-        //         "data" => NULL,
-        //         "success" => false,
-        //         "message" => "Ride is already started / completed / canceled",
-        //     ], 403);
-        // }
+        if ($ride->status != 'confirmed'){
+            return response()->json([
+                "data" => NULL,
+                "success" => false,
+                "message" => "Ride is not in confirmed status",
+            ], 403);
+        }
 
         try {
             $ride->status = 'started';
