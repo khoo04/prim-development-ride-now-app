@@ -50,7 +50,6 @@ class RideNow_Vehicles extends Model
         return $this->rides()
             ->where(function ($query) {
                 $query->where('status', 'confirmed')
-                    ->whereHas('passengers') // Ensure passengers are not empty
                     ->orWhere('status', 'started');
             })
             ->exists();
